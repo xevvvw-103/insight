@@ -3,6 +3,7 @@ import * as fs from "fs-extra";
 import * as JSZip from "jszip";
 import * as checkHelper from "./checkHelperFunctions";
 import * as matchHelper from "./matchHelperFunctions";
+import * as otherHelper from "./otherHelperFunctions";
 
 /**
  * This is the main programmatic entry point for the project.
@@ -12,6 +13,7 @@ import * as matchHelper from "./matchHelperFunctions";
 export default class InsightFacade implements IInsightFacade {
 	public insightDatasets: InsightDataset[];
 	public datasetIDList: string[];
+	public sectionsListToStore: any[] = [];
 
 	constructor() {
 		console.trace("InsightFacadeImpl::init()");
@@ -52,61 +54,49 @@ export default class InsightFacade implements IInsightFacade {
 		let thisObject: this;
 		thisObject = this;
 		let coursesPromisesList: any[] = [];
-		checkHelper.setTheStoredIDList(thisObject.datasetIDList);
+		otherHelper.setTheStoredIDList(thisObject.datasetIDList);
 		return new Promise(function (resolve, reject) {
-			if (!checkHelper.isIDValid(id)) {
+			if (!otherHelper.isIDValid(id)) {
 				return reject(new InsightError("invalid ID"));
 			}
 			if (kind === InsightDatasetKind.Courses) {
-				JSZip.loadAsync(content, {base64: true}).then((zipObj: any) => {
-					const coursesFolder = zipObj.folder("courses");
-					coursesFolder.forEach((relativePath: string, file: any) => {
-						const currentCoursePromise = file.async("string");
-						coursesPromisesList.push(currentCoursePromise);
-					});
-					let sectionsListToStore: any[] = [];
-					let numOfRows: number = 0;
-					Promise.all(coursesPromisesList).then((coursesList: any) => {
-						if (coursesList.length === 0) {
-							return reject(new InsightError("no course file in the courses folder"));
-						}
-						for (const course of coursesList) {
-							try {
-								let currentCourseSectionsList = JSON.parse(course)["result"];
-								if (currentCourseSectionsList.length > 0) {
-									for (const section of currentCourseSectionsList) {
-										sectionsListToStore.push(checkHelper.makeSectionToStore(id, section));
-										numOfRows += 1;
-									}
+				JSZip.loadAsync(content, {base64: true})
+					.then((zipObj: any) => {
+						const coursesFolder = zipObj.folder("courses");
+						coursesFolder.forEach((relativePath: string, file: any) => {
+							const currentCoursePromise = file.async("string");
+							coursesPromisesList.push(currentCoursePromise);
+						});
+						thisObject.sectionsListToStore = [];
+						Promise.all(coursesPromisesList)
+							.then((coursesList: any) => {
+								if (coursesList.length === 0) {
+									return reject(new InsightError("no course file in the courses folder"));
 								}
-							} catch (e) {
-								return reject(new InsightError("try adding sections error"));
-							}
-						}
-						if (sectionsListToStore.length === 0) {
-							return reject(new InsightError("the sections list to be stored is empty"));
-						} else {
-							thisObject.addDatasetHelper(id, sectionsListToStore, numOfRows);
-							return resolve(thisObject.datasetIDList);
-						}
+								let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
+								if (!updateSuccessOrNot) {
+									return reject(new InsightError("try adding sections error"));
+								}
+								if (thisObject.sectionsListToStore.length === 0) {
+									return reject(new InsightError("the sections list to be stored is empty"));
+								} else {
+									let numOfRows: number = thisObject.sectionsListToStore.length;
+									thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, numOfRows);
+									return resolve(thisObject.datasetIDList);
+								}
+							})
+							.catch(function (error: any) {
+								return reject(new InsightError(error));
+							});
+					})
+					.catch(function (error: any) {
+						return reject(new InsightError(error));
 					});
-				});
 			} else {
-				reject(new InsightError("invalid kind, should be Course only"));
+				return reject(new InsightError("invalid kind, should be Course only"));
 			}
 		});
 	}
-
-	// 			}).catch(function (error: any) {
-	// 				return reject(new InsightError(error));
-	// 			});
-	// 		}).catch(function (error: any) {
-	// 			return reject(new InsightError(error));
-	// 		});
-	// 	}  else {
-	// 		return reject(new InsightError("invalid kind, should be Course only"));
-	// 	}
-	// });
 
 	public removeDataset(id: string): Promise<string> {
 		let thisObject: this;
@@ -182,13 +172,29 @@ export default class InsightFacade implements IInsightFacade {
 				if (matchedResult.length > 5000) {
 					return reject(new InsightError("Only queries with a maximum of 5000 results are supported."));
 				} else {
-					resultFilteredColumns = checkHelper.filterTheCOLUMNS(matchedResult, columns, order);
+					resultFilteredColumns = matchHelper.filterTheCOLUMNS(matchedResult, columns, order);
 					return resolve(resultFilteredColumns);
 				}
 			} else {
 				return reject(new InsightError("This query is not valid"));
 			}
 		});
+	}
+
+	public updateSectionsListToStore(coursesList: any, id: string): boolean {
+		for (const course of coursesList) {
+			try {
+				let currentCourseSectionsList = JSON.parse(course)["result"];
+				if (currentCourseSectionsList.length > 0) {
+					for (const section of currentCourseSectionsList) {
+						this.sectionsListToStore.push(otherHelper.makeSectionToStore(id, section));
+					}
+				}
+			} catch (e) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public addDatasetHelper(id: string, sectionsListToStore: any[], numOfRows: number) {

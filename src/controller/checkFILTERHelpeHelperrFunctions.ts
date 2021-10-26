@@ -1,138 +1,11 @@
 import {
-	checkCOLUMNSValidOrNot,
-	checkInputStringValidOrNot,
-	checkNEGATIONValidOrNot,
-	currentCOLUMNS,
+	checkFILTERValidOrNot,
 	currentReferencingDatasetID,
 	mfield,
 	sfield,
 	theStoredIDList,
 } from "./checkHelperFunctions";
 
-export function checkOPTIONSValidOrNot(options: any): boolean {
-	console.log("This is check OPTIONS Valid Or Not function");
-
-	if (typeof options === "object") {
-		if (Array.isArray(options)) {
-			console.log("OPTIONS is an object, but OPTIONS can't be an array");
-			return false;
-		}
-	} else {
-		console.log("OPTIONS is not even an Object");
-		return false;
-	}
-
-	let OPTIONSKeysList: any[] = Object.keys(options);
-	let numberOfKeysInOPTIONS: number = OPTIONSKeysList.length;
-	if (numberOfKeysInOPTIONS > 2) {
-		console.log("OPTIONS has more than 2 keys, but it can only have at most two");
-		return false;
-	} else if (numberOfKeysInOPTIONS === 2) {
-		if (!OPTIONSKeysList.includes("COLUMNS") || !OPTIONSKeysList.includes("ORDER")) {
-			console.log("OPTIONS has 2 keys, but missing COLUMNS/ORDER");
-			return false;
-		} else {
-			if (!checkCOLUMNSValidOrNot(options["COLUMNS"])) {
-				console.log("COLUMNS not valid");
-				return false;
-			}
-			if (!checkORDERValidOrNot(options["ORDER"])) {
-				console.log("ORDER not valid");
-				return false;
-			}
-		}
-	} else if (numberOfKeysInOPTIONS === 1) {
-		if (!OPTIONSKeysList.includes("COLUMNS")) {
-			console.log("OPTIONS has 1 key, but missing COLUMNS");
-			return false;
-		} else {
-			if (!checkCOLUMNSValidOrNot(options["COLUMNS"])) {
-				console.log("COLUMNS not valid");
-				return false;
-			}
-		}
-	} else {
-		console.log("OPTIONS has no key");
-		return false;
-	}
-	console.log("OPTIONS is valid");
-	return true;
-}
-
-export function checkORDERValidOrNot(ORDER: any): boolean {
-	if (typeof ORDER !== "string") {
-		console.log("ORDER must be a string, but here not");
-		return false;
-	} else {
-		if (!currentCOLUMNS.includes(ORDER)) {
-			console.log("idString_field pair in ORDER is not in COLUMN");
-			return false;
-		}
-	}
-	console.log("ORDER in OPTIONS is valid");
-	return true;
-}
-export function checkWHEREValidOrNot(WHERE: any): boolean {
-	if (typeof WHERE === "object") {
-		if (Array.isArray(WHERE)) {
-			console.log("WHERE is an object, but WHERE can't be an array");
-			return false;
-		}
-		console.log("WHERE is an object, now we will check the FILTER in WHERE");
-		if (!checkFILTERValidOrNot(WHERE, true)) {
-			console.log("Filter in WHERE is not valid");
-			return false;
-		}
-	} else {
-		console.log("WHERE is not even an Object");
-		return false;
-	}
-	console.log("WHERE is valid");
-	return true;
-}
-export function checkFILTERValidOrNot(FILTER: any, isThisFilterInWhereOrNot: boolean): boolean {
-	console.log("This is check FILTER Valid Or Not function");
-	let FILTERKeysList: any[] = Object.keys(FILTER);
-	if (FILTERKeysList.length === 0) {
-		if (isThisFilterInWhereOrNot) {
-			console.log("this is the FILTER in WHERE, it has no key, but still return true");
-			return true;
-		} else {
-			console.log("this is not the FILTER in WHERE, it has no key, so not valid, so return false");
-			return false;
-		}
-	}
-	if (FILTERKeysList.length !== 1) {
-		console.log("this FILTER should have and can only have one key, but here not");
-		return false;
-	}
-	let theOnlyFilterKey = FILTERKeysList[0];
-	if (theOnlyFilterKey === "AND" || theOnlyFilterKey === "OR") {
-		console.log("this is the logic comparison (AND/OR) check");
-		if (!checkLOGICCOMPARISONValidOrNot(theOnlyFilterKey, FILTER)) {
-			return false;
-		}
-	} else if (theOnlyFilterKey === "LT" || theOnlyFilterKey === "GT" || theOnlyFilterKey === "EQ") {
-		console.log("This is the MCOMPARISON check");
-		if (!checkMCOMPARISONValidOrNot(theOnlyFilterKey, FILTER)) {
-			return false;
-		}
-	} else if (theOnlyFilterKey === "IS") {
-		console.log("This is the SCOMPARISON check");
-		if (!checkSCOMPARISONValidOrNot(theOnlyFilterKey, FILTER)) {
-			return false;
-		}
-	} else if (theOnlyFilterKey === "NOT") {
-		console.log("This is the NEGATION check");
-		if (!checkNEGATIONValidOrNot(theOnlyFilterKey, FILTER)) {
-			return false;
-		}
-	} else {
-		console.log("Not valid filter name, it must be ('AND' | 'OR' | 'LT' | 'GT' | 'EQ' | 'IS' | 'NOT') ");
-		return false;
-	}
-	return true;
-}
 export function checkLOGICCOMPARISONValidOrNot(theOnlyFilterKey: string, FILTER: any): boolean {
 	let TheLOGICCOMPARISON: any[] = [];
 	if (!Array.isArray(FILTER[theOnlyFilterKey])) {
@@ -197,6 +70,7 @@ export function checkMCOMPARISONValidOrNot(theOnlyFilterKey: string, FILTER: any
 
 	return true;
 }
+
 export function checkMKeyParsingValidOrNot(mKeyParsing: string[]): boolean {
 	let theOnlyMCOMPARATORKeyIDString: string = mKeyParsing[0];
 	let theOnlyMCOMPARATORKeyMField: string = mKeyParsing[1];
@@ -217,6 +91,7 @@ export function checkMKeyParsingValidOrNot(mKeyParsing: string[]): boolean {
 	}
 	return true;
 }
+
 export function checkSCOMPARISONValidOrNot(theOnlyFilterKey: string, FILTER: any): boolean {
 	let theSCOMPARISON: any = FILTER[theOnlyFilterKey];
 	if (typeof theSCOMPARISON === "object") {
@@ -256,6 +131,7 @@ export function checkSCOMPARISONValidOrNot(theOnlyFilterKey: string, FILTER: any
 	}
 	return true;
 }
+
 export function checkSKeyParsingValidOrNot(sKeyParsing: string[]): boolean {
 	let theOnlySCOMPARATORKeyIDString = sKeyParsing[0];
 	let theOnlySCOMPARATORKeyMField = sKeyParsing[1];
@@ -272,6 +148,52 @@ export function checkSKeyParsingValidOrNot(sKeyParsing: string[]): boolean {
 
 	if (!sfield.includes(theOnlySCOMPARATORKeyMField)) {
 		console.log("the SCOMPARISON Field is not a valid one");
+		return false;
+	}
+	return true;
+}
+
+export function checkInputStringValidOrNot(inputString: any): boolean {
+	if (typeof inputString !== "string") {
+		console.log("inputString must be a String, but here not");
+		return false;
+	}
+
+	if (inputString.includes("*")) {
+		const stringOnlyContainsAstrisks = inputString.replace(/[^*]/g, "");
+		const numberOfAstrisksInInputString = stringOnlyContainsAstrisks.length;
+		if (numberOfAstrisksInInputString > 2) {
+			console.log("number of * in the inputString exceeds two");
+			return false;
+		} else if (numberOfAstrisksInInputString === 2) {
+			if (!(inputString.charAt(0) === "*" && inputString.charAt(inputString.length - 1) === "*")) {
+				console.log("* appears in the middle of the inputString");
+				return false;
+			}
+		} else if (numberOfAstrisksInInputString === 1) {
+			if (!(inputString.charAt(0) === "*") && !(inputString.charAt(inputString.length - 1) === "*")) {
+				console.log("* appears in the middle of the inputString");
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+export function checkNEGATIONValidOrNot(theOnlyFilterKey: string, FILTER: any): boolean {
+	let theNEGATION: any = FILTER[theOnlyFilterKey];
+	if (typeof theNEGATION === "object") {
+		if (Array.isArray(theNEGATION)) {
+			console.log("theNEGATION is an object, but it can't be an array");
+			return false;
+		}
+	} else {
+		console.log("theNEGATION is not even an object");
+		return false;
+	}
+
+	if (!checkFILTERValidOrNot(theNEGATION, false)) {
+		console.log("FILTER in NOT is not valid");
 		return false;
 	}
 	return true;
