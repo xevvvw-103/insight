@@ -1,6 +1,10 @@
 import {InsightError} from "./IInsightFacade";
-import {checkFILTERValidOrNot, checkOPTIONSValidOrNot, checkWHEREValidOrNot} from "./validCheck";
-
+import {
+	checkLOGICCOMPARISONValidOrNot,
+	checkMCOMPARISONValidOrNot,
+	checkNEGATIONValidOrNot,
+	checkSCOMPARISONValidOrNot,
+} from "./checkFILTERHelpeHelperrFunctions";
 export const BODY: string = "WHERE";
 export const OPTIONS: string = "OPTIONS";
 export const QUERY: string[] = [BODY, OPTIONS];
@@ -10,44 +14,7 @@ export const allfield: string[] = ["avg", "pass", "fail", "audit", "year", "dept
 export let currentCOLUMNS: string[] = [];
 // the current referencing DatasetID should be the first one reached in COLUMN
 export let currentReferencingDatasetID: string = "";
-
 export let theStoredIDList: string[] = [];
-
-export function isIDValid(id: string): boolean {
-	if (id === null) {
-		console.log("ID is null");
-		return false;
-	}
-	if (id.includes("_")) {
-		console.log("ID contains an underscore");
-		return false;
-	}
-	if (!id.trim()) {
-		console.log("ID contains only white spaces");
-		return false;
-	}
-
-	if (theStoredIDList.includes(id)) {
-		console.log("ID already existed");
-		return false;
-	}
-	return true;
-}
-
-export function makeSectionToStore(id: string, section: any): any[] {
-	let sectionToStore: any = {};
-	sectionToStore[id + "_dept"] = String(section["Subject"]);
-	sectionToStore[id + "_id"] = String(section["Course"]);
-	sectionToStore[id + "_avg"] = Number(section["Avg"]);
-	sectionToStore[id + "_instructor"] = String(section["Professor"]);
-	sectionToStore[id + "_title"] = String(section["Title"]);
-	sectionToStore[id + "_pass"] = Number(section["Pass"]);
-	sectionToStore[id + "_fail"] = Number(section["Fail"]);
-	sectionToStore[id + "_audit"] = Number(section["Audit"]);
-	sectionToStore[id + "_uuid"] = String(section["id"]);
-	sectionToStore[id + "_year"] = Number(section["Year"]);
-	return sectionToStore;
-}
 
 export function setTheStoredIDList(datasetIDList: string[]) {
 	theStoredIDList = datasetIDList;
@@ -87,7 +54,57 @@ export function checkQUERYValidOrNot(query: any): boolean {
 	return true;
 }
 
-export function checkCOLUMNSValidOrNot(COLUMNS: any): boolean {
+function checkOPTIONSValidOrNot(options: any): boolean {
+	console.log("This is check OPTIONS Valid Or Not function");
+
+	if (typeof options === "object") {
+		if (Array.isArray(options)) {
+			console.log("OPTIONS is an object, but OPTIONS can't be an array");
+			return false;
+		}
+	} else {
+		console.log("OPTIONS is not even an Object");
+		return false;
+	}
+
+	let OPTIONSKeysList: any[] = Object.keys(options);
+	let numberOfKeysInOPTIONS: number = OPTIONSKeysList.length;
+	if (numberOfKeysInOPTIONS > 2) {
+		console.log("OPTIONS has more than 2 keys, but it can only have at most two");
+		return false;
+	} else if (numberOfKeysInOPTIONS === 2) {
+		if (!OPTIONSKeysList.includes("COLUMNS") || !OPTIONSKeysList.includes("ORDER")) {
+			console.log("OPTIONS has 2 keys, but missing COLUMNS/ORDER");
+			return false;
+		} else {
+			if (!checkCOLUMNSValidOrNot(options["COLUMNS"])) {
+				console.log("COLUMNS not valid");
+				return false;
+			}
+			if (!checkORDERValidOrNot(options["ORDER"])) {
+				console.log("ORDER not valid");
+				return false;
+			}
+		}
+	} else if (numberOfKeysInOPTIONS === 1) {
+		if (!OPTIONSKeysList.includes("COLUMNS")) {
+			console.log("OPTIONS has 1 key, but missing COLUMNS");
+			return false;
+		} else {
+			if (!checkCOLUMNSValidOrNot(options["COLUMNS"])) {
+				console.log("COLUMNS not valid");
+				return false;
+			}
+		}
+	} else {
+		console.log("OPTIONS has no key");
+		return false;
+	}
+	console.log("OPTIONS is valid");
+	return true;
+}
+
+function checkCOLUMNSValidOrNot(COLUMNS: any): boolean {
 	let COLUMNSList: any[];
 	if (!Array.isArray(COLUMNS)) {
 		console.log("COLUMNS must be an array, but here not");
@@ -127,7 +144,7 @@ export function checkCOLUMNSValidOrNot(COLUMNS: any): boolean {
 	return true;
 }
 
-export function checkEachCOLUMNParsingValidOrNot(eachCOLUMNParsing: string[]): boolean {
+function checkEachCOLUMNParsingValidOrNot(eachCOLUMNParsing: string[]): boolean {
 	let eachCOLUMNIDString: string = eachCOLUMNParsing[0];
 	let eachCOLUMNMField: string = eachCOLUMNParsing[1];
 
@@ -151,67 +168,79 @@ export function checkEachCOLUMNParsingValidOrNot(eachCOLUMNParsing: string[]): b
 	return true;
 }
 
-export function checkInputStringValidOrNot(inputString: any): boolean {
-	if (typeof inputString !== "string") {
-		console.log("inputString must be a String, but here not");
+function checkORDERValidOrNot(ORDER: any): boolean {
+	if (typeof ORDER !== "string") {
+		console.log("ORDER must be a string, but here not");
 		return false;
-	}
-
-	if (inputString.includes("*")) {
-		const stringOnlyContainsAstrisks = inputString.replace(/[^*]/g, "");
-		const numberOfAstrisksInInputString = stringOnlyContainsAstrisks.length;
-		if (numberOfAstrisksInInputString > 2) {
-			console.log("number of * in the inputString exceeds two");
+	} else {
+		if (!currentCOLUMNS.includes(ORDER)) {
+			console.log("idString_field pair in ORDER is not in COLUMN");
 			return false;
-		} else if (numberOfAstrisksInInputString === 2) {
-			if (!(inputString.charAt(0) === "*" && inputString.charAt(inputString.length - 1) === "*")) {
-				console.log("* appears in the middle of the inputString");
-				return false;
-			}
-		} else if (numberOfAstrisksInInputString === 1) {
-			if (!(inputString.charAt(0) === "*") && !(inputString.charAt(inputString.length - 1) === "*")) {
-				console.log("* appears in the middle of the inputString");
-				return false;
-			}
 		}
 	}
+	console.log("ORDER in OPTIONS is valid");
 	return true;
 }
 
-export function checkNEGATIONValidOrNot(theOnlyFilterKey: string, FILTER: any): boolean {
-	let theNEGATION: any = FILTER[theOnlyFilterKey];
-	if (typeof theNEGATION === "object") {
-		if (Array.isArray(theNEGATION)) {
-			console.log("theNEGATION is an object, but it can't be an array");
+function checkWHEREValidOrNot(WHERE: any): boolean {
+	if (typeof WHERE === "object") {
+		if (Array.isArray(WHERE)) {
+			console.log("WHERE is an object, but WHERE can't be an array");
+			return false;
+		}
+		console.log("WHERE is an object, now we will check the FILTER in WHERE");
+		if (!checkFILTERValidOrNot(WHERE, true)) {
+			console.log("Filter in WHERE is not valid");
 			return false;
 		}
 	} else {
-		console.log("theNEGATION is not even an object");
+		console.log("WHERE is not even an Object");
 		return false;
 	}
-
-	if (!checkFILTERValidOrNot(theNEGATION, false)) {
-		console.log("FILTER in NOT is not valid");
-		return false;
-	}
+	console.log("WHERE is valid");
 	return true;
 }
 
-export function filterTheCOLUMNS(matchedResult: any[], columns: string[], order: string): any[] {
-	let matchedResultWithFilteredColumns: any[] = [];
-	for (let eachMatchedResult of matchedResult) {
-		let eachMatchedResultWithFilteredColumns: any = {};
-		for (let eachColumn of columns) {
-			eachMatchedResultWithFilteredColumns[eachColumn] = eachMatchedResult[eachColumn];
+export function checkFILTERValidOrNot(FILTER: any, isThisFilterInWhereOrNot: boolean): boolean {
+	console.log("This is check FILTER Valid Or Not function");
+	let FILTERKeysList: any[] = Object.keys(FILTER);
+	if (FILTERKeysList.length === 0) {
+		if (isThisFilterInWhereOrNot) {
+			console.log("this is the FILTER in WHERE, it has no key, but still return true");
+			return true;
+		} else {
+			console.log("this is not the FILTER in WHERE, it has no key, so not valid, so return false");
+			return false;
 		}
-		matchedResultWithFilteredColumns.push(eachMatchedResultWithFilteredColumns);
 	}
-	if (order === "") {
-		console.log("there is no order in OPTIONS, so no need to change the order of the result");
-		return matchedResultWithFilteredColumns;
+	if (FILTERKeysList.length !== 1) {
+		console.log("this FILTER should have and can only have one key, but here not");
+		return false;
+	}
+	let theOnlyFilterKey = FILTERKeysList[0];
+	if (theOnlyFilterKey === "AND" || theOnlyFilterKey === "OR") {
+		console.log("this is the logic comparison (AND/OR) check");
+		if (!checkLOGICCOMPARISONValidOrNot(theOnlyFilterKey, FILTER)) {
+			return false;
+		}
+	} else if (theOnlyFilterKey === "LT" || theOnlyFilterKey === "GT" || theOnlyFilterKey === "EQ") {
+		console.log("This is the MCOMPARISON check");
+		if (!checkMCOMPARISONValidOrNot(theOnlyFilterKey, FILTER)) {
+			return false;
+		}
+	} else if (theOnlyFilterKey === "IS") {
+		console.log("This is the SCOMPARISON check");
+		if (!checkSCOMPARISONValidOrNot(theOnlyFilterKey, FILTER)) {
+			return false;
+		}
+	} else if (theOnlyFilterKey === "NOT") {
+		console.log("This is the NEGATION check");
+		if (!checkNEGATIONValidOrNot(theOnlyFilterKey, FILTER)) {
+			return false;
+		}
 	} else {
-		console.log("there is an order in OPTIONS, changing the order of the result");
-		matchedResultWithFilteredColumns.sort((a, b) => (a[order] > b[order] ? 1 : b[order] > a[order] ? -1 : 0));
-		return matchedResultWithFilteredColumns;
+		console.log("Not valid filter name, it must be ('AND' | 'OR' | 'LT' | 'GT' | 'EQ' | 'IS' | 'NOT') ");
+		return false;
 	}
+	return true;
 }

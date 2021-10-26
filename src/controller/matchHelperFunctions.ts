@@ -29,6 +29,7 @@ export function matchFILTER(data: any[], thisFilter: any): any[] {
 	}
 	return matchedResult;
 }
+
 function matchLogicComparison(data: any[], TheLOGICCOMPARISONKey: string, TheLOGICCOMPARISON: any[]): any[] {
 	let matchedResult: any[] = [];
 	if (TheLOGICCOMPARISONKey === "AND") {
@@ -50,6 +51,7 @@ function matchLogicComparison(data: any[], TheLOGICCOMPARISONKey: string, TheLOG
 		return matchedResult;
 	}
 }
+
 function matchMComparison(data: any[], TheMCOMPARISONKey: string, theMCOMPARISON: any): any[] {
 	let matchedResult: any[] = [];
 	let theMKey = Object.keys(theMCOMPARISON)[0];
@@ -78,6 +80,7 @@ function matchMComparison(data: any[], TheMCOMPARISONKey: string, theMCOMPARISON
 		return matchedResult;
 	}
 }
+
 function matchSComparison(data: any[], theSCOMPARISON: any): any[] {
 	let matchedResult: any[] = [];
 	let theSKey: string = Object.keys(theSCOMPARISON)[0];
@@ -108,6 +111,7 @@ function matchSComparison(data: any[], theSCOMPARISON: any): any[] {
 		return matchedResult;
 	}
 }
+
 function matchNegation(data: any[], theNEGATION: any): any[] {
 	let matchedResult: any[] = [];
 	let notMatchedResult: any[] = matchFILTER(data, theNEGATION);
@@ -129,6 +133,7 @@ function matchContainInputString(theSKey: string, inputString: string, data: any
 	}
 	return matchedResult;
 }
+
 function matchEndWithInputString(theSKey: string, inputString: string, data: any[]): any[] {
 	let matchedResult: any[] = [];
 	let inputStringWithoutAstrisk: string = inputString.substring(1);
@@ -145,6 +150,7 @@ function matchEndWithInputString(theSKey: string, inputString: string, data: any
 	}
 	return matchedResult;
 }
+
 function matchStartWithInputString(theSKey: string, inputString: string, data: any[]): any[] {
 	let matchedResult: any[] = [];
 	let inputStringWithoutAstrisk: string = inputString.substring(0, inputString.length - 1);
@@ -159,4 +165,23 @@ function matchStartWithInputString(theSKey: string, inputString: string, data: a
 		}
 	}
 	return matchedResult;
+}
+
+export function filterTheCOLUMNS(matchedResult: any[], columns: string[], order: string): any[] {
+	let matchedResultWithFilteredColumns: any[] = [];
+	for (let eachMatchedResult of matchedResult) {
+		let eachMatchedResultWithFilteredColumns: any = {};
+		for (let eachColumn of columns) {
+			eachMatchedResultWithFilteredColumns[eachColumn] = eachMatchedResult[eachColumn];
+		}
+		matchedResultWithFilteredColumns.push(eachMatchedResultWithFilteredColumns);
+	}
+	if (order === "") {
+		console.log("there is no order in OPTIONS, so no need to change the order of the result");
+		return matchedResultWithFilteredColumns;
+	} else {
+		console.log("there is an order in OPTIONS, changing the order of the result");
+		matchedResultWithFilteredColumns.sort((a, b) => (a[order] > b[order] ? 1 : b[order] > a[order] ? -1 : 0));
+		return matchedResultWithFilteredColumns;
+	}
 }
