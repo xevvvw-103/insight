@@ -185,7 +185,7 @@ function getBuilding
 				let roomArray: any[] = [];
 				let buildingInfo = getBuildingInfo(buildingTree);
 				if (!buildingInfo) {
-					buildingInfoFiller(buildingObj, buildingInfo, fileName);
+					await buildingInfoFiller(buildingObj, buildingInfo, fileName);
 				} else {
 					throw new InsightError("building is empty");
 				}
