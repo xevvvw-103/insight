@@ -4,7 +4,7 @@ import * as JSZip from "jszip";
 import * as checkHelper from "./checkHelperFunctions";
 import * as matchHelper from "./matchHelperFunctions";
 import * as otherHelper from "./otherHelperFunctions";
-import {addDataRoom} from "./roomsHelpers";
+import {addRoomSet} from "./roomsHelpers";
 
 /**
  * This is the main programmatic entry point for the project.
@@ -90,11 +90,10 @@ export default class InsightFacade implements IInsightFacade {
 						reject(new InsightError(error));
 					});
 			} else if (kind === InsightDatasetKind.Rooms) {
-				addDataRoom(thisObject, id, content).then((result) => {
-					resolve(result);
-				}).catch((err) => {
-					reject(new InsightError(err));
-				});
+				let buildingsPromiselist: any[] = addRoomSet(content, reject);
+				let numOfRows = buildingsPromiselist.length;
+				thisObject.addDatasetHelper(id, buildingsPromiselist, kind, numOfRows);
+				resolve(thisObject.datasetIDList);
 			}
 		});
 	}

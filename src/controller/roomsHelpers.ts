@@ -1,73 +1,49 @@
-import {InsightDatasetKind, InsightError} from "./IInsightFacade";
+import {InsightError} from "./IInsightFacade";
 import parse5 from "parse5";
-import JSZip from "jszip";
-import * as fs from "fs";
+import * as JSZip from "jszip";
 
-export function addDataRoom(object: any, id: string, content: string): Promise<string[]> {
-	let that = object;
-	return new Promise<string[]>((resolve, reject) => {
-		let loadDatasetPromises: any[] = [];
-		let buildings: any[] = [];
-		let linkedBuildings: string[] = [];
-		JSZip.loadAsync(content, {base64: true}).then((zip: any) => {
-			zip.files["index.htm"].async("text").then((data: any) => {
-				let indexTree = parse5.parse(data);
-				let tbodyIndex = getTbody(indexTree);
-				indexHelper(tbodyIndex, linkedBuildings);
-			}).catch(() => {
-				throw new InsightError("index.htm error");
-			});
-			zip.folder("campus").folder("discover").folder("buildings-and-classrooms")
-				.forEach((relativePath: string, file: any) => {
-					let validBuilding = getBuilding(file, relativePath, linkedBuildings, buildings, reject);
-					loadDatasetPromises.push(validBuilding);
-				});
-			fileSaver(that, loadDatasetPromises, buildings, id);
-		}).catch(() => {
-			reject(new InsightError("loadAsync not working"));
-		});
-	});
-}
-
-function indexHelper(index: any, list: any[]) {
-	index.childNodes.forEach((node: any) => {
-		if (node.nodeName === "tr") {
-			let block1 = node.childNodes[3];
-			let rowName = block1.childNodes[0].value;
-			let shortName = rowName.trim().replace("\n", "");
-			list.push(shortName);
-		}
-	});
-}
-
-function getTbody (ast: any) {
+export function getTbody (ast: any): any {
 	if (ast.nodeName === "tbody") {
 		return ast;
 	}
-
-	if (ast.childNodes === undefined || ast.childNodes.length === 0) {
+	if (ast.childNodes === undefined) {
 		return null;
 	}
+	for (let child of ast.childNodes) {
+		if (getTbody(child) !== null) {
+			return getTbody(child);
+		}
+	}
+	return null;
+}
 
+export function getContainedBuildings(ast: any, list: string[]) {
 	for (let node of ast.childNodes) {
-		let res: any = getTbody(node);
-		if (res !== null) {
-			return res;
+		if (node.nodeName === "tr") {
+			let buildingCode = node.childNodes[3].childNodes[0].value.trim().replace("\n", "");
+			if (buildingCode.length !== 0) {
+				list.push(buildingCode);
+			}
 		}
 	}
 }
 
-function getBuildingInfo (ast: any) {
-	try {
-		return ast.childNodes[6].childNodes[3].childNodes[31]
-			.childNodes[10].childNodes[1].childNodes[3].childNodes[1]
-			.childNodes[3].childNodes[1].childNodes[1].childNodes[1];
-	} catch {
+export function getInfo (ast: any): any {
+	if (ast.nodeName === "div" && ast.attrs[0].value === "building-info") {
+		return ast;
+	}
+	if (ast.childNodes === undefined) {
 		return null;
 	}
+	for (let child of ast.childNodes) {
+		if (getInfo(child) !== null) {
+			return getInfo(child);
+		}
+	}
+	return null;
 }
 
-function getGeoLocation(address: any) {
+export function getGeoLocation(address: any) {
 	let http = require("http");
 	let AddressURL = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team140/"
 		+ encodeURIComponent(address);
@@ -112,95 +88,67 @@ function getGeoLocation(address: any) {
 	});
 }
 
-async function buildingInfoFiller(object: any, info: any, file: any) {
-	object["fullname"] = info.childNodes[1].childNodes[0].childNodes[0].value;
-	object["shortname"] = file;
-	object["address"] = info.childNodes[3].childNodes[0].childNodes[0].value;
-	let latlon = await getGeoLocation(object["address"]);
-	object["lat"] = latlon.lat;
-	object["lon"] = latlon.lon;
-}
-
-function roomInfoFiller(node: any, object: any, array: any[], info: any, building: any) {
-	let roomObj: any = {};
-	if (node.nodeName === "tr") {
-		roomObj["number"] = node.childNodes[1].childNodes[1].childNodes[0].value.toString();
-		roomObj["fullname"] =
-			info.childNodes[1].childNodes[0].childNodes[0].value;
-		roomObj["shortname"] = building;
-		roomObj["address"] =
-			info.childNodes[3].childNodes[0].childNodes[0].value;
-		roomObj["lat"] = object["lat"];
-		roomObj["lon"] = object["lon"];
-		roomObj["name"] = roomObj["shortname"] + "_" + roomObj["number"];
-		roomObj["seats"] =
-			node.childNodes[3].childNodes[0].value.trim().replace("\n", "");
-		roomObj["type"] =
-			node.childNodes[7].childNodes[0].value.trim().replace("\n", "");
-		roomObj["furniture"] =
-			node.childNodes[5].childNodes[0].value.trim().replace("\n", "");
-		roomObj["href"] = node.childNodes[9].childNodes[1].childNodes[0]
-			.parentNode.attrs[0].value;
-		array.push(roomObj);
+export function storeRoomInfo
+(buildingTbodyTree: any, building: any, buildingCode: string, latlon: any, roomList: any[]) {
+	let room: any = {};
+	for (let child of buildingTbodyTree.childNodes) {
+		if (child.nodeName === "tr") {
+			room["fullname"] = building["fullname"];
+			room["shortname"] = buildingCode;
+			room["number"] = child.childNodes[1].childNodes[1].childNodes[0].value;
+			room["name"] = room["shortname"] + "_" + room["number"];
+			room["address"] = building["address"];
+			room["lat"] = latlon.lat;
+			room["lon"] = latlon.lon;
+			room["seat"] = child.childNodes[3].childNodes[0].value.trim().replace("\n", "");
+			room["type"] = child.childNodes[7].childNodes[0].value.trim().replace("\n", "");
+			room["furniture"] = child.childNodes[5].childNodes[0].value.trim().replace("\n", "");
+			room["href"] = child.childNodes[9].childNodes[1].attrs[0].value;
+			roomList.push(room);
+			console.log(room);
+		}
 	}
 }
 
-function fileSaver(object: any, promise: any[], buildings: any[], id: string) {
-	Promise.all(promise).then(() => {
-		let allEmpty = true;
-		buildings.forEach(function (building: any) {
-			if (building["room"] !== []) {
-				allEmpty = false;
-			}
-		});
-		if (!allEmpty) {
-			let num = 0;
-			buildings.forEach((cont: any) => {
-				if (cont["rooms"] !== undefined) {
-					const curr = cont["rooms"].length;
-					num = num + curr;
-				}
-			});
-			object.datasetIDList.push(id);
-			object.insightDatasets.push({id, kind: InsightDatasetKind.Rooms, numRows: num});
-			fs.writeFileSync("./data/" + id + "$" + "rooms", JSON.stringify(buildings), "utf8");
-			return Promise.resolve(object.insightDatasets);
-		} else {
-			return Promise.reject(new InsightError("no room"));
-		}
-	}).catch((error: any) => {
-		return Promise.reject(new InsightError(error));
-	});
-}
-
-function getBuilding
-(file: any, relativePath: string, linkedBuildings: string[], buildings: any[], reject: (reason?: any) => void) {
-	return file(relativePath).async("text")
-		.then(async function success(fileData: string) {
-			let buildingTree = parse5.parse(fileData);
-			let tbodyBuilding = getTbody(buildingTree);
-			let fileName = file.name.replace("campus/discover/buildings-and-classrooms/", "");
-			if (linkedBuildings.includes(fileName)) {
-				let buildingObj: any = [];
-				let roomArray: any[] = [];
-				let buildingInfo = getBuildingInfo(buildingTree);
-				if (!buildingInfo) {
-					await buildingInfoFiller(buildingObj, buildingInfo, fileName);
-				} else {
-					throw new InsightError("building is empty");
-				}
-				if (!tbodyBuilding) {
-					tbodyBuilding.childNodes.forEach((node: any) => {
-						roomInfoFiller(node, buildingObj, roomArray, buildingInfo, fileName);
-					});
-					buildingObj["rooms"] = roomArray;
-					buildings.push(buildingObj);
-				} else {
-					throw new InsightError("no room");
+export function getBuildingAndRoomInfo
+(zip: any, building: any, buildingCode: string, roomList: any[], reject: (reason?: any) => void) {
+	return zip.folder("rooms").folder("campus").folder("discover").folder("buildings-and-classrooms")
+		.file(buildingCode).async("string").then(async (file: any) => {
+			let buildingTree = parse5.parse(file);
+			let buildingInfo = getInfo(buildingTree);
+			let buildingTbodyTree = getTbody(buildingTree);
+			if (buildingInfo !== null) {
+				building["fullname"] = buildingInfo.childNodes[1].childNodes[0].childNodes[0].value;
+				building["address"] = buildingInfo.childNodes[3].childNodes[0].childNodes[0].value;
+				let latlon = await getGeoLocation(building["address"]);
+				if (buildingTbodyTree !== null) {
+					storeRoomInfo(buildingTbodyTree, building, buildingCode, latlon, roomList);
+					building["rooms"] = roomList;
 				}
 			}
 		}).catch(() => {
-			reject(new InsightError());
+			reject(new InsightError("building file error"));
 		});
 }
+
+export function addRoomSet(content: string, reject: (reason?: any) => void) {
+	let buildingsPromiselist: any[] = [];
+	let containedBuildingList: string[] = [];
+	JSZip.loadAsync(content, {base64: true}).then(async (zip: any) => {
+		const index = await zip.folder("rooms").file("index.htm").async("string");
+		const indexTree = parse5.parse(index);
+		let tbodyTree = getTbody(indexTree);
+		getContainedBuildings(tbodyTree, containedBuildingList);
+		containedBuildingList.forEach((buildingCode) => {
+			let building: any = {};
+			let roomList: any[] = [];
+			let promise = getBuildingAndRoomInfo(zip, building, buildingCode, roomList, reject);
+			buildingsPromiselist.push(promise);
+		});
+	}).catch(() => {
+		reject(new InsightError("index.htm error"));
+	});
+	return buildingsPromiselist;
+}
+
 
