@@ -17,6 +17,7 @@ describe("InsightFacade", function () {
 	const datasetsToLoad: {[key: string]: string} = {
 		courses: "./test/resources/archives/courses.zip",
 		rooms: "./test/resources/archives/rooms.zip",
+		invalid: "./test/resources/archives/invalidrooms.zip",
 	};
 
 	before(function () {
@@ -67,6 +68,14 @@ describe("InsightFacade", function () {
 			const expected: string[] = [id];
 			return insightFacade.addDataset(id, content, InsightDatasetKind.Rooms).then((result: string[]) => {
 				expect(result).to.deep.equal(expected);
+			});
+		});
+		it("Should add an invalid room dataset", function () {
+			const id: string = "rooms2";
+			const content: string = datasetContents.get("invalid") ?? "";
+			const expected: InsightError = new InsightError("Invalid Room Zip");
+			return insightFacade.addDataset(id, content, InsightDatasetKind.Rooms).then((result: string[]) => {
+				expect(result).to.be.instanceof(expected);
 			});
 		});
 	});

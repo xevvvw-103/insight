@@ -4,7 +4,7 @@ import * as JSZip from "jszip";
 import * as checkHelper from "./checkHelperFunctions";
 import * as matchHelper from "./matchHelperFunctions";
 import * as otherHelper from "./otherHelperFunctions";
-import {addRoomSet} from "./roomsHelpers";
+import {indexHandler, infoHandler,} from "./roomsHelpers";
 
 /**
  * This is the main programmatic entry point for the project.
@@ -70,32 +70,45 @@ export default class InsightFacade implements IInsightFacade {
 						thisObject.sectionsListToStore = [];
 						Promise.all(coursesPromisesList)
 							.then((coursesList: any) => {
-								if (coursesList.length === 0) {
-									reject(new InsightError("no course file in the courses folder"));
-								}
 								let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
-								if (!updateSuccessOrNot) {
-									reject(new InsightError("try adding sections error"));
+								if (coursesList.length === 0 || !updateSuccessOrNot) {
+									reject(new InsightError
+									("no course file in the courses folder OR try adding sections error"));
 								} else {
 									let numOfRows = thisObject.sectionsListToStore.length;
 									thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
 									resolve(thisObject.datasetIDList);
 								}
-							})
-							.catch(function (error: any) {
+							}).catch(function (error: any) {
 								reject(new InsightError(error));
 							});
-					})
-					.catch(function (error: any) {
+					}).catch(function (error: any) {
 						reject(new InsightError(error));
 					});
 			} else if (kind === InsightDatasetKind.Rooms) {
-				let buildingsPromiselist: any[] = addRoomSet(content, reject);
-				let numOfRows = buildingsPromiselist.length;
-				thisObject.addDatasetHelper(id, buildingsPromiselist, kind, numOfRows);
-				resolve(thisObject.datasetIDList);
+				let roomsPromise: Array<Promise<any>> = [];
+				let containedBuildingList: string[] = [];
+				JSZip.loadAsync(content, {base64: true}).then(async (zip: any) => {
+					await indexHandler(zip, reject, containedBuildingList);
+					infoHandler(containedBuildingList, zip, reject, roomsPromise);
+					Promise.all(roomsPromise).then((roomList) => {
+						let numOfRows = thisObject.counter(roomList);
+						thisObject.addDatasetHelper(id, roomList, kind, numOfRows);
+						resolve(thisObject.datasetIDList);
+					});
+				}).catch(() => {
+					reject(new InsightError("index.htm error"));
+				});
 			}
 		});
+	}
+
+	private counter(roomList: any[]) {
+		let numOfRows = 0;
+		roomList.forEach((rooms) => {
+			numOfRows += rooms.length;
+		});
+		return numOfRows;
 	}
 
 	public removeDataset(id: string): Promise<string> {
