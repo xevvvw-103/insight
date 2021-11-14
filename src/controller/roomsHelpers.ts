@@ -1,7 +1,7 @@
 import {InsightError} from "./IInsightFacade";
 import parse5 from "parse5";
 
-export function getTbody (ast: any): any {
+function getTbody (ast: any): any {
 	if (ast.nodeName === "tbody") {
 		return ast;
 	}
@@ -16,7 +16,7 @@ export function getTbody (ast: any): any {
 	return null;
 }
 
-export function getContainedBuildings(ast: any, list: string[]) {
+function getContainedBuildings(ast: any, list: string[]) {
 	for (let node of ast.childNodes) {
 		if (node.nodeName === "tr") {
 			let buildingCode = node.childNodes[3].childNodes[0].value.trim().replace("\n", "");
@@ -27,7 +27,7 @@ export function getContainedBuildings(ast: any, list: string[]) {
 	}
 }
 
-export function getInfo (ast: any): any {
+function getInfo (ast: any): any {
 	if (ast.nodeName === "div" && ast.attrs[0].value === "building-info") {
 		return ast;
 	}
@@ -42,7 +42,7 @@ export function getInfo (ast: any): any {
 	return null;
 }
 
-export function getGeoLocation(address: any) {
+function getGeoLocation(address: any) {
 	let http = require("http");
 	let AddressURL = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team140/"
 		+ encodeURIComponent(address);
@@ -87,7 +87,7 @@ export function getGeoLocation(address: any) {
 	});
 }
 
-export function storeRoomInfo
+function storeRoomInfo
 (buildingTbodyTree: any, building: any, buildingCode: string, latlon: any, roomList: any[]) {
 	let room: any = {};
 	for (let child of buildingTbodyTree.childNodes) {

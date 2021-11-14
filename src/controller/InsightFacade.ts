@@ -62,29 +62,29 @@ export default class InsightFacade implements IInsightFacade {
 				reject(new InsightError("Invalid ID"));
 			}
 			if (kind === InsightDatasetKind.Courses) {
-				JSZip.loadAsync(content, {base64: true})
-					.then((zipObj: any) => {
-						zipObj.folder("courses").forEach((relativePath: string, file: any) => {
-							coursesPromisesList.push(file.async("string"));
-						});
-						thisObject.sectionsListToStore = [];
-						Promise.all(coursesPromisesList)
-							.then((coursesList: any) => {
-								let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
-								if (coursesList.length === 0 || !updateSuccessOrNot) {
-									reject(new InsightError
-									("no course file in the courses folder OR try adding sections error"));
-								} else {
-									let numOfRows = thisObject.sectionsListToStore.length;
-									thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
-									resolve(thisObject.datasetIDList);
-								}
-							}).catch(function (error: any) {
-								reject(new InsightError(error));
-							});
+				JSZip.loadAsync(content, {base64: true}).then((zipObj: any) => {
+					zipObj.folder("courses").forEach((relativePath: string, file: any) => {
+						coursesPromisesList.push(file.async("string"));
+					});
+					thisObject.sectionsListToStore = [];
+					Promise.all(coursesPromisesList).then((coursesList: any) => {
+						if (coursesList.length === 0) {
+							reject(new InsightError("no course file in the courses folder"));
+						}
+						let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
+						if (!updateSuccessOrNot) {
+							reject(new InsightError("try adding sections error"));
+						} else {
+							let numOfRows = thisObject.sectionsListToStore.length;
+							thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
+							resolve(thisObject.datasetIDList);
+						}
 					}).catch(function (error: any) {
 						reject(new InsightError(error));
 					});
+				}).catch(function (error: any) {
+					reject(new InsightError(error));
+				});
 			} else if (kind === InsightDatasetKind.Rooms) {
 				let roomsPromise: Array<Promise<any>> = [];
 				let containedBuildingList: string[] = [];
@@ -92,8 +92,7 @@ export default class InsightFacade implements IInsightFacade {
 					await indexHandler(zip, reject, containedBuildingList);
 					infoHandler(containedBuildingList, zip, reject, roomsPromise);
 					Promise.all(roomsPromise).then((roomList) => {
-						let numOfRows = thisObject.counter(roomList);
-						thisObject.addDatasetHelper(id, roomList, kind, numOfRows);
+						thisObject.lastStep(thisObject, roomList, id, kind);
 						resolve(thisObject.datasetIDList);
 					});
 				}).catch(() => {
@@ -103,12 +102,23 @@ export default class InsightFacade implements IInsightFacade {
 		});
 	}
 
-	private counter(roomList: any[]) {
-		let numOfRows = 0;
-		roomList.forEach((rooms) => {
-			numOfRows += rooms.length;
+	private lastStep(thisObject: this, roomList: any[], id: string, kind: InsightDatasetKind.Rooms) {
+		let result: any[] = [];
+		thisObject.updateResult(roomList, result);
+		let numOfRows = result.length;
+		// console.log(numOfRows);
+		// console.log(result);
+		thisObject.addDatasetHelper(id, roomList, kind, numOfRows);
+	}
+
+	private updateResult(roomList: any[], result: any[]) {
+		roomList.forEach((roomsInBuilding) => {
+			if (roomsInBuilding.length !== 0) {
+				roomsInBuilding.forEach((room: any) => {
+					result.push(room);
+				});
+			}
 		});
-		return numOfRows;
 	}
 
 	public removeDataset(id: string): Promise<string> {
