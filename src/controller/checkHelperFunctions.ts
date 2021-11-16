@@ -1,28 +1,71 @@
-import {InsightError} from "./IInsightFacade";
+import {InsightDataset, InsightDatasetKind} from "./IInsightFacade";
 import {
 	checkLOGICCOMPARISONValidOrNot,
 	checkMCOMPARISONValidOrNot,
 	checkNEGATIONValidOrNot,
 	checkSCOMPARISONValidOrNot,
-} from "./checkFILTERHelpeHelperrFunctions";
+} from "./checkFILTERHelperHelperFunctions";
+import {checkTransformationsValidOrNot} from "./checkTransformationsHelper";
+import {checkORDERValidOrNot} from "./checkOrderHelper";
+import {checkCOLUMNSValidOrNot} from "./checkColumnsHelper";
 export const BODY: string = "WHERE";
 export const OPTIONS: string = "OPTIONS";
+export const TRANSFORMATIONS: string = "TRANSFORMATIONS";
 export const QUERY: string[] = [BODY, OPTIONS];
-export const mfield: string[] = ["avg", "pass", "fail", "audit", "year"];
-export const sfield: string[] = ["dept", "id", "instructor", "title", "uuid"];
-export const allfield: string[] = ["avg", "pass", "fail", "audit", "year", "dept", "id", "instructor", "title", "uuid"];
+export const mfieldCourse: string[] = ["avg", "pass", "fail", "audit", "year"];
+export const sfieldCourse: string[] = ["dept", "id", "instructor", "title", "uuid"];
+export const allfieldCourse: string[] = [...mfieldCourse, ...sfieldCourse];
+
+export const mfieldRoom: string[] = ["lat", "lon", "seats"];
+export const sfieldRoom: string[] = ["fullname", "shortname", "number", "name", "address", "type", "furniture", "href"];
+export const allfieldRoom: string[] = [...mfieldRoom, ...sfieldRoom];
+
+export const ALLTOKENS: string[] = ["MAX", "MIN", "AVG", "COUNT", "SUM"];
+export const MTOKENS: string[] = ["MAX", "MIN", "AVG", "SUM"];
+export const STOKENS: string[] = ["COUNT"];
+
 export let currentCOLUMNS: string[] = [];
-// the current referencing DatasetID should be the first one reached in COLUMN
+export let currentGROUP: string[] = [];
+export let currentAPPLYKeys: string[] = [];
+
+// the current referencing DatasetID should be the first one reached in COLUMN/TRANSFORMATIONS
 export let currentReferencingDatasetID: string = "";
+export let currentReferencingDatasetIDType: InsightDatasetKind;
+export let theStoredDatasetList: InsightDataset[] = [];
 export let theStoredIDList: string[] = [];
+
 
 export function setTheStoredIDList(datasetIDList: string[]) {
 	theStoredIDList = datasetIDList;
 }
 
+export function setTheStoredDatasetList(insightDatasets: InsightDataset[]) {
+	theStoredDatasetList = insightDatasets;
+}
+
+export function setCurrentReferencingDatasetID(id: string) {
+	currentReferencingDatasetID = id;
+}
+
+export function setCurrentReferencingDatasetIDType(type: InsightDatasetKind) {
+	currentReferencingDatasetIDType = type;
+}
+
+export function setCurrentGroup(group: string[]) {
+	currentGROUP = group;
+}
+
+export function setCurrentColumns(columns: string[]) {
+	currentCOLUMNS = columns;
+}
+
+export function addApplyToCurrentAPPLYKeys(applyKey: string) {
+	currentAPPLYKeys.push(applyKey);
+}
+
 export function checkQUERYValidOrNot(query: any): boolean {
 	console.log("now checking the Query Valid Or Not");
-
+	let hasTransformations: boolean = false;
 	if (typeof query === "object") {
 		if (Array.isArray(query)) {
 			console.log("QUERY is an object, but QUERY can't be an array");
@@ -33,18 +76,34 @@ export function checkQUERYValidOrNot(query: any): boolean {
 		return false;
 	}
 	let QueryKeysList: any[] = Object.keys(query);
-	if (!QueryKeysList.includes(BODY) || !QueryKeysList.includes(OPTIONS) || QueryKeysList.length !== 2) {
-		console.log("QUERYKeys are invalid (BODY or OPTIONS missing or there are more/less than 2 query keys) ");
-		return false;
+	if (QueryKeysList.includes(TRANSFORMATIONS)){
+		console.log("The QUERYKeys has a transformation part");
+		hasTransformations = true;
+		if (!QueryKeysList.includes(BODY) || !QueryKeysList.includes(OPTIONS) || QueryKeysList.length !== 3) {
+			console.log("QUERYKeys are invalid (BODY or OPTIONS missing or there are more/less than 3 query key) ");
+			return false;
+		}
+	} else {
+		console.log("The QUERYKeys do not have a transformation part");
+		if (!QueryKeysList.includes(BODY) || !QueryKeysList.includes(OPTIONS) || QueryKeysList.length !== 2) {
+			console.log("QUERYKeys are invalid (BODY or OPTIONS missing or there are more/less than 2 query keys) ");
+			return false;
+		}
+	}
+	if (hasTransformations){
+		let currentTRANSFORMATIONS: any = query[TRANSFORMATIONS];
+		if (!checkTransformationsValidOrNot(currentTRANSFORMATIONS)){
+			console.log("TRANSFORMATIONS is not valid");
+			return false;
+		}
 	}
 	let currentOPTIONS: any = query[OPTIONS];
 	let currentWHERE: any = query[BODY];
 
-	if (!checkOPTIONSValidOrNot(currentOPTIONS)) {
+	if (!checkOPTIONSValidOrNot(currentOPTIONS, hasTransformations)) {
 		console.log("OPTIONS is not valid");
 		return false;
 	}
-
 	if (!checkWHEREValidOrNot(currentWHERE)) {
 		console.log("WHERE is not valid");
 		return false;
@@ -54,7 +113,7 @@ export function checkQUERYValidOrNot(query: any): boolean {
 	return true;
 }
 
-function checkOPTIONSValidOrNot(options: any): boolean {
+function checkOPTIONSValidOrNot(options: any, hasTransformations: boolean): boolean {
 	console.log("This is check OPTIONS Valid Or Not function");
 
 	if (typeof options === "object") {
@@ -77,7 +136,7 @@ function checkOPTIONSValidOrNot(options: any): boolean {
 			console.log("OPTIONS has 2 keys, but missing COLUMNS/ORDER");
 			return false;
 		} else {
-			if (!checkCOLUMNSValidOrNot(options["COLUMNS"])) {
+			if (!checkCOLUMNSValidOrNot(options["COLUMNS"], hasTransformations)) {
 				console.log("COLUMNS not valid");
 				return false;
 			}
@@ -91,7 +150,7 @@ function checkOPTIONSValidOrNot(options: any): boolean {
 			console.log("OPTIONS has 1 key, but missing COLUMNS");
 			return false;
 		} else {
-			if (!checkCOLUMNSValidOrNot(options["COLUMNS"])) {
+			if (!checkCOLUMNSValidOrNot(options["COLUMNS"], hasTransformations)) {
 				console.log("COLUMNS not valid");
 				return false;
 			}
@@ -101,84 +160,6 @@ function checkOPTIONSValidOrNot(options: any): boolean {
 		return false;
 	}
 	console.log("OPTIONS is valid");
-	return true;
-}
-
-function checkCOLUMNSValidOrNot(COLUMNS: any): boolean {
-	let COLUMNSList: any[];
-	if (!Array.isArray(COLUMNS)) {
-		console.log("COLUMNS must be an array, but here not");
-		return false;
-	} else {
-		COLUMNSList = COLUMNS;
-		if (COLUMNSList.length === 0) {
-			console.log("COLUMNS must be an non-empty array, but here it is empty");
-			return false;
-		}
-	}
-	for (let eachCOLUMN of COLUMNSList) {
-		if (typeof eachCOLUMN !== "string") {
-			console.log("COLUMNS must be an array of string, but here some element is not string");
-			return false;
-		}
-
-		let eachCOLUMNParsing: string[];
-		if (!eachCOLUMN.includes("_")) {
-			console.log("the COLUMN " + eachCOLUMN + " SCOMPARATORKey missing '_' ");
-			return false;
-		} else {
-			eachCOLUMNParsing = eachCOLUMN.split("_");
-			if (eachCOLUMNParsing.length !== 2) {
-				console.log("the COLUMN " + eachCOLUMN + " has more than one '_' ");
-				return false;
-			}
-		}
-
-		if (!checkEachCOLUMNParsingValidOrNot(eachCOLUMNParsing)) {
-			console.log("this COLUMNParsing is not valid");
-			return false;
-		}
-	}
-	currentCOLUMNS = COLUMNSList;
-	console.log("COLUMNS in OPTIONS is valid");
-	return true;
-}
-
-function checkEachCOLUMNParsingValidOrNot(eachCOLUMNParsing: string[]): boolean {
-	let eachCOLUMNIDString: string = eachCOLUMNParsing[0];
-	let eachCOLUMNMField: string = eachCOLUMNParsing[1];
-
-	if (!theStoredIDList.includes(eachCOLUMNIDString)) {
-		console.log("the dataset ID referenced in COLUMNS hasn't been added yet");
-		return false;
-	} else {
-		if (currentReferencingDatasetID === "") {
-			currentReferencingDatasetID = eachCOLUMNIDString;
-		} else {
-			if (eachCOLUMNIDString !== currentReferencingDatasetID) {
-				console.log("the COLUMNS are referencing different datasets");
-				return false;
-			}
-		}
-	}
-	if (!allfield.includes(eachCOLUMNMField)) {
-		console.log("this COLUMN has an invalid field");
-		return false;
-	}
-	return true;
-}
-
-function checkORDERValidOrNot(ORDER: any): boolean {
-	if (typeof ORDER !== "string") {
-		console.log("ORDER must be a string, but here not");
-		return false;
-	} else {
-		if (!currentCOLUMNS.includes(ORDER)) {
-			console.log("idString_field pair in ORDER is not in COLUMN");
-			return false;
-		}
-	}
-	console.log("ORDER in OPTIONS is valid");
 	return true;
 }
 
@@ -244,3 +225,4 @@ export function checkFILTERValidOrNot(FILTER: any, isThisFilterInWhereOrNot: boo
 	}
 	return true;
 }
+

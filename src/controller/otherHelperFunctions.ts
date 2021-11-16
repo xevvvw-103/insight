@@ -14,11 +14,9 @@ export function makeSectionToStore(id: string, section: any): any[] {
 	sectionToStore[id + "_year"] = Number(section["Year"]);
 	return sectionToStore;
 }
-
 export function setTheStoredIDList(datasetIDList: string[]) {
 	theStoredIDList = datasetIDList;
 }
-
 export function isIDValid(id: string): boolean {
 	if (id === null) {
 		console.log("ID is null");

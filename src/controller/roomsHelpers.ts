@@ -1,5 +1,5 @@
 import {InsightError} from "./IInsightFacade";
-import parse5 from "parse5";
+import * as parse5 from "parse5";
 
 function getTbody (ast: any): any {
 	if (ast.nodeName === "tbody") {
@@ -88,23 +88,22 @@ function getGeoLocation(address: any) {
 }
 
 function storeRoomInfo
-(buildingTbodyTree: any, building: any, buildingCode: string, latlon: any, roomList: any[]) {
-	let room: any = {};
-	for (let child of buildingTbodyTree.childNodes) {
+(id: string, tree: any, fullname: string, address: string,  buildingCode: string, latlon: any, roomList: any[]) {
+	for (let child of tree.childNodes) {
+		let room: any = {};
 		if (child.nodeName === "tr") {
-			room["fullname"] = building["fullname"];
-			room["shortname"] = buildingCode;
-			room["number"] = child.childNodes[1].childNodes[1].childNodes[0].value;
-			room["name"] = room["shortname"] + "_" + room["number"];
-			room["address"] = building["address"];
-			room["lat"] = latlon.lat;
-			room["lon"] = latlon.lon;
-			room["seat"] = child.childNodes[3].childNodes[0].value.trim().replace("\n", "");
-			room["type"] = child.childNodes[7].childNodes[0].value.trim().replace("\n", "");
-			room["furniture"] = child.childNodes[5].childNodes[0].value.trim().replace("\n", "");
-			room["href"] = child.childNodes[9].childNodes[1].attrs[0].value;
+			room[id + "_fullname"] = fullname;
+			room[id + "_shortname"] = buildingCode;
+			room[id + "_number"] = child.childNodes[1].childNodes[1].childNodes[0].value;
+			room[id + "_name"] = room["shortname"] + "_" + room["number"];
+			room[id + "_address"] = address;
+			room[id + "_lat"] = latlon.lat;
+			room[id + "_lon"] = latlon.lon;
+			room[id + "_seats"] = child.childNodes[3].childNodes[0].value.trim().replace("\n", "");
+			room[id + "_type"] = child.childNodes[7].childNodes[0].value.trim().replace("\n", "");
+			room[id + "_furniture"] = child.childNodes[5].childNodes[0].value.trim().replace("\n", "");
+			room[id + "_href"] = child.childNodes[9].childNodes[1].attrs[0].value;
 			roomList.push(room);
-			// console.log(room);
 		}
 	}
 }
@@ -120,28 +119,29 @@ export async function indexHandler(zip: any, reject: (reason?: any) => void, con
 }
 
 export function infoHandler
-(containedBuildingList: string[], zip: any, reject: (reason?: any) => void, roomsPromise: Array<Promise<any>>) {
-	containedBuildingList.forEach((buildingCode) => {
+(id: string, list: string[], zip: any, reject: (reason?: any) => void, roomsPromise: Array<Promise<any>>) {
+	list.forEach((buildingCode) => {
 		let path = "rooms/campus/discover/buildings-and-classrooms/" + buildingCode;
-		let building: any = {};
 		let roomList: any[] = [];
-		let promise = zip.file(path).async("string").then(async (buildingFile: any) => {
-			let buildingTree = parse5.parse(buildingFile);
-			let buildingInfo = getInfo(buildingTree);
-			let buildingTbodyTree = getTbody(buildingTree);
-			if (buildingInfo !== null) {
-				building["fullname"] = buildingInfo.childNodes[1].childNodes[0].childNodes[0].value;
-				building["address"] = buildingInfo.childNodes[3].childNodes[0].childNodes[0].value;
-				let latlon = await getGeoLocation(building["address"]);
-				if (buildingTbodyTree !== null) {
-					storeRoomInfo(buildingTbodyTree, building, buildingCode, latlon, roomList);
+		if (zip.file(path)) {
+			let promise = zip.file(path).async("string").then(async (buildingFile: any) => {
+				let buildingTree = parse5.parse(buildingFile);
+				let buildingInfo = getInfo(buildingTree);
+				let buildingTbodyTree = getTbody(buildingTree);
+				if (buildingInfo !== null) {
+					let fullName = buildingInfo.childNodes[1].childNodes[0].childNodes[0].value;
+					let address = buildingInfo.childNodes[3].childNodes[0].childNodes[0].value;
+					let latlon = await getGeoLocation(address);
+					if (buildingTbodyTree !== null) {
+						storeRoomInfo(id, buildingTbodyTree, fullName, address, buildingCode, latlon, roomList);
+					}
 				}
-			}
-			return roomList;
-		}).catch(() => {
-			reject(new InsightError("building file error"));
-		});
-		roomsPromise.push(promise);
+				return roomList;
+			}).catch(() => {
+				reject(new InsightError("building file error"));
+			});
+			roomsPromise.push(promise);
+		}
 	});
 }
 

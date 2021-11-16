@@ -4,14 +4,15 @@ import * as JSZip from "jszip";
 import * as checkHelper from "./checkHelperFunctions";
 import * as matchHelper from "./matchHelperFunctions";
 import * as otherHelper from "./otherHelperFunctions";
+import * as transformationsHelper from "./transformationHelperFunctions";
 import {indexHandler, infoHandler,} from "./roomsHelpers";
+
 
 /**
  * This is the main programmatic entry point for the project.
  * Method documentation is in IInsightFacade
  *
  */
-
 export default class InsightFacade implements IInsightFacade {
 	public insightDatasets: InsightDataset[];
 	public datasetIDList: string[];
@@ -59,12 +60,14 @@ export default class InsightFacade implements IInsightFacade {
 		otherHelper.setTheStoredIDList(thisObject.datasetIDList);
 		return new Promise(function (resolve, reject) {
 			if (!otherHelper.isIDValid(id)) {
-				reject(new InsightError("Invalid ID"));
+				return reject(new InsightError("invalid ID"));
 			}
 			if (kind === InsightDatasetKind.Courses) {
 				JSZip.loadAsync(content, {base64: true}).then((zipObj: any) => {
-					zipObj.folder("courses").forEach((relativePath: string, file: any) => {
-						coursesPromisesList.push(file.async("string"));
+					const coursesFolder = zipObj.folder("courses");
+					coursesFolder.forEach((relativePath: string, file: any) => {
+						const currentCoursePromise = file.async("string");
+						coursesPromisesList.push(currentCoursePromise);
 					});
 					thisObject.sectionsListToStore = [];
 					Promise.all(coursesPromisesList).then((coursesList: any) => {
@@ -72,13 +75,12 @@ export default class InsightFacade implements IInsightFacade {
 							reject(new InsightError("no course file in the courses folder"));
 						}
 						let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
-						if (!updateSuccessOrNot) {
-							reject(new InsightError("try adding sections error"));
-						} else {
-							let numOfRows = thisObject.sectionsListToStore.length;
-							thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
-							resolve(thisObject.datasetIDList);
+						if (!updateSuccessOrNot || thisObject.sectionsListToStore.length === 0) {
+							reject(new InsightError("try adding sections error or the sections list is empty"));
 						}
+						let numOfRows: number = thisObject.sectionsListToStore.length;
+						thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
+						resolve(thisObject.datasetIDList);
 					}).catch(function (error: any) {
 						reject(new InsightError(error));
 					});
@@ -90,7 +92,7 @@ export default class InsightFacade implements IInsightFacade {
 				let containedBuildingList: string[] = [];
 				JSZip.loadAsync(content, {base64: true}).then(async (zip: any) => {
 					await indexHandler(zip, reject, containedBuildingList);
-					infoHandler(containedBuildingList, zip, reject, roomsPromise);
+					infoHandler(id, containedBuildingList, zip, reject, roomsPromise);
 					Promise.all(roomsPromise).then((roomList) => {
 						thisObject.lastStep(thisObject, roomList, id, kind);
 						resolve(thisObject.datasetIDList);
@@ -106,9 +108,7 @@ export default class InsightFacade implements IInsightFacade {
 		let result: any[] = [];
 		thisObject.updateResult(roomList, result);
 		let numOfRows = result.length;
-		// console.log(numOfRows);
-		// console.log(result);
-		thisObject.addDatasetHelper(id, roomList, kind, numOfRows);
+		thisObject.addDatasetHelper(id, result, kind, numOfRows);
 	}
 
 	private updateResult(roomList: any[], result: any[]) {
@@ -177,6 +177,7 @@ export default class InsightFacade implements IInsightFacade {
 		let thisObject: this;
 		thisObject = this;
 		checkHelper.setTheStoredIDList(thisObject.datasetIDList);
+		checkHelper.setTheStoredDatasetList(thisObject.insightDatasets);
 		return new Promise((resolve, reject) => {
 			if (checkHelper.checkQUERYValidOrNot(query)) {
 				let theFILTERInWHERE: any = query["WHERE"];
@@ -187,9 +188,11 @@ export default class InsightFacade implements IInsightFacade {
 					order = options["ORDER"];
 				}
 				let data: any[] = [];
+
+				let path: string = "./data/" + checkHelper.currentReferencingDatasetID + "$"
+					+ checkHelper.currentReferencingDatasetIDType;
 				try {
-					const content = fs.readFileSync("./data/" + checkHelper.currentReferencingDatasetID
-						+ "$" + "courses", "utf8");
+					const content = fs.readFileSync(path, "utf8");
 					data = JSON.parse(content);
 				} catch (err) {
 					return reject(new InsightError("file reading error"));
@@ -197,6 +200,12 @@ export default class InsightFacade implements IInsightFacade {
 				let matchedResult: any[];
 				let resultFilteredColumns: any[];
 				matchedResult = matchHelper.matchFILTER(data, theFILTERInWHERE);
+				if (Object.keys(query).includes("TRANSFORMATIONS")){
+					let transformations: any = query["TRANSFORMATIONS"];
+					let group: string[] = transformations["GROUP"];
+					let apply: any[] = transformations["APPLY"];
+					matchedResult = transformationsHelper.doTransformations(matchedResult, group, apply);
+				}
 				if (matchedResult.length > 5000) {
 					return reject(new InsightError("Only queries with a maximum of 5000 results are supported."));
 				} else {

@@ -1,10 +1,14 @@
 import {
 	checkFILTERValidOrNot,
 	currentReferencingDatasetID,
-	mfield,
-	sfield,
+	currentReferencingDatasetIDType,
+	mfieldCourse,
+	sfieldCourse,
+	mfieldRoom,
+	sfieldRoom,
 	theStoredIDList,
 } from "./checkHelperFunctions";
+import {InsightDatasetKind} from "./IInsightFacade";
 
 export function checkLOGICCOMPARISONValidOrNot(theOnlyFilterKey: string, FILTER: any): boolean {
 	let TheLOGICCOMPARISON: any[] = [];
@@ -70,7 +74,6 @@ export function checkMCOMPARISONValidOrNot(theOnlyFilterKey: string, FILTER: any
 
 	return true;
 }
-
 export function checkMKeyParsingValidOrNot(mKeyParsing: string[]): boolean {
 	let theOnlyMCOMPARATORKeyIDString: string = mKeyParsing[0];
 	let theOnlyMCOMPARATORKeyMField: string = mKeyParsing[1];
@@ -85,10 +88,18 @@ export function checkMKeyParsingValidOrNot(mKeyParsing: string[]): boolean {
 		}
 	}
 
-	if (!mfield.includes(theOnlyMCOMPARATORKeyMField)) {
-		console.log("the MCOMPARISON Field is not a valid one");
-		return false;
+	if (currentReferencingDatasetIDType === InsightDatasetKind.Courses){
+		if (!mfieldCourse.includes(theOnlyMCOMPARATORKeyMField)) {
+			console.log("the MCOMPARISON Field is not a valid one");
+			return false;
+		}
+	}else {
+		if (!mfieldRoom.includes(theOnlyMCOMPARATORKeyMField)) {
+			console.log("the MCOMPARISON Field is not a valid one");
+			return false;
+		}
 	}
+
 	return true;
 }
 
@@ -131,7 +142,6 @@ export function checkSCOMPARISONValidOrNot(theOnlyFilterKey: string, FILTER: any
 	}
 	return true;
 }
-
 export function checkSKeyParsingValidOrNot(sKeyParsing: string[]): boolean {
 	let theOnlySCOMPARATORKeyIDString = sKeyParsing[0];
 	let theOnlySCOMPARATORKeyMField = sKeyParsing[1];
@@ -146,13 +156,20 @@ export function checkSKeyParsingValidOrNot(sKeyParsing: string[]): boolean {
 		}
 	}
 
-	if (!sfield.includes(theOnlySCOMPARATORKeyMField)) {
-		console.log("the SCOMPARISON Field is not a valid one");
-		return false;
+	if (currentReferencingDatasetIDType === InsightDatasetKind.Courses){
+		if (!sfieldCourse.includes(theOnlySCOMPARATORKeyMField)) {
+			console.log("the SCOMPARISON Field is not a valid one");
+			return false;
+		}
+	}else {
+		if (!sfieldRoom.includes(theOnlySCOMPARATORKeyMField)) {
+			console.log("the SCOMPARISON Field is not a valid one");
+			return false;
+		}
 	}
+
 	return true;
 }
-
 export function checkInputStringValidOrNot(inputString: any): boolean {
 	if (typeof inputString !== "string") {
 		console.log("inputString must be a String, but here not");
