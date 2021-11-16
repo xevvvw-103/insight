@@ -95,7 +95,7 @@ function storeRoomInfo
 			room[id + "_fullname"] = String(fullname);
 			room[id + "_shortname"] = String(buildingCode);
 			room[id + "_number"] = String(child.childNodes[1].childNodes[1].childNodes[0].value);
-			room[id + "_name"] = String(room[id + "shortname"] + "_" + room[id + "number"]);
+			room[id + "_name"] = String(room[id + "_shortname"] + "_" + room[id + "_number"]);
 			room[id + "_address"] = String(address);
 			room[id + "_lat"] = Number(latlon.lat);
 			room[id + "_lon"] = Number(latlon.lon);
