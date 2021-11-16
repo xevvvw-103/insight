@@ -3,7 +3,7 @@ import {
 	addApplyToCurrentAPPLYKeys,
 	allfieldCourse,
 	allfieldRoom,
-	ALLTOKENS,
+	ALLTOKENS, currentAPPLYKeys,
 	currentReferencingDatasetID,
 	currentReferencingDatasetIDType,
 	MTOKENS, setCurrentGroup,
@@ -182,6 +182,10 @@ function isApplyKeyValid(theApplyKey: string): boolean {
 	}
 	if (!theApplyKey.trim()) {
 		console.log("theApplyKey contains only white spaces");
+		return false;
+	}
+	if (currentAPPLYKeys.includes(theApplyKey)) {
+		console.log("duplicate apply keys name");
 		return false;
 	}
 	return true;

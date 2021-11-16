@@ -200,8 +200,8 @@ export default class InsightFacade implements IInsightFacade {
 				}
 				let data: any[] = [];
 
-				let path: string = "./data/" + checkHelper.currentReferencingDatasetID + "$"
-					+ checkHelper.currentReferencingDatasetIDType;
+				let path: string = "./data/" + checkHelper.currentReferencingDatasetID + "$" +
+					checkHelper.currentReferencingDatasetIDType;
 				try {
 					const content = fs.readFileSync(path, "utf8");
 					data = JSON.parse(content);
@@ -230,6 +230,7 @@ export default class InsightFacade implements IInsightFacade {
 	}
 
 	public updateSectionsListToStore(coursesList: any, id: string): boolean {
+		this.sectionsListToStore = [];
 		for (const course of coursesList) {
 			try {
 				let currentCourseSectionsList = JSON.parse(course)["result"];
