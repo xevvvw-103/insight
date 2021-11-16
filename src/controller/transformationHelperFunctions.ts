@@ -5,8 +5,8 @@ export function doTransformations(matchedResult: any[], group: string[], apply: 
 	for (const result of matchedResult) {
 		let resultWithOnlyGroupKeysValues: any[] = [];
 		for (const eachGroupKey of group) {
-			let eachGroupKeysValues: any = result[eachGroupKey];
-			resultWithOnlyGroupKeysValues.push(eachGroupKeysValues);
+			let eachGroupKeysValue: any = result[eachGroupKey];
+			resultWithOnlyGroupKeysValues.push(eachGroupKeysValue);
 		}
 		let GroupExistOrNot: boolean = false;
 		for (const eachGroupObject of GroupObjectList) {
@@ -95,10 +95,9 @@ function minHelper(thisGroupList: any[], applyTokenStuff: string): number {
 }
 
 function sumHelper(thisGroupList: any[], applyTokenStuff: string): number {
-	let sum = new Decimal(0);
+	let sum: number = 0;
 	for (let eachItemInThisGroup of thisGroupList) {
-		let convertedValue = new Decimal(eachItemInThisGroup[applyTokenStuff]);
-		sum = Decimal.add(sum, convertedValue);
+		sum += eachItemInThisGroup[applyTokenStuff];
 	}
 	return Number(sum.toFixed(2));
 }

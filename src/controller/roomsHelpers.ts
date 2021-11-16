@@ -132,7 +132,7 @@ export function infoHandler
 					let fullName = buildingInfo.childNodes[1].childNodes[0].childNodes[0].value;
 					let address = buildingInfo.childNodes[3].childNodes[0].childNodes[0].value;
 					let latlon = await getGeoLocation(address);
-					if (buildingTbodyTree) {
+					if (buildingTbodyTree !== null) {
 						storeRoomInfo(id, buildingTbodyTree, fullName, address, buildingCode, latlon, roomList);
 					}
 				}
@@ -144,4 +144,3 @@ export function infoHandler
 		}
 	});
 }
-
