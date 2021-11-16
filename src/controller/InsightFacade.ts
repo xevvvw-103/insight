@@ -14,15 +14,19 @@ import {indexHandler, infoHandler,} from "./roomsHelpers";
  *
  */
 export default class InsightFacade implements IInsightFacade {
-	public insightDatasets: InsightDataset[];
-	public datasetIDList: string[];
+	public insightDatasets: InsightDataset[] = [];
+	public datasetIDList: string[] = [];
 	public sectionsListToStore: any[] = [];
 
 	constructor() {
 		console.trace("InsightFacadeImpl::init()");
+		// initiate the folder to store data
+		this.LoadFiles();
+	}
+
+	private LoadFiles() {
 		this.insightDatasets = [];
 		this.datasetIDList = [];
-		// initiate the folder to store data
 		if (!fs.existsSync("./data/")) {
 			fs.mkdirSync("./data/");
 		}
@@ -56,6 +60,7 @@ export default class InsightFacade implements IInsightFacade {
 	public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
 		let thisObject: this;
 		thisObject = this;
+		thisObject.LoadFiles();
 		let coursesPromisesList: any[] = [];
 		otherHelper.setTheStoredIDList(thisObject.datasetIDList);
 		return new Promise(function (resolve, reject) {
@@ -66,13 +71,12 @@ export default class InsightFacade implements IInsightFacade {
 				JSZip.loadAsync(content, {base64: true}).then((zipObj: any) => {
 					const coursesFolder = zipObj.folder("courses");
 					coursesFolder.forEach((relativePath: string, file: any) => {
-						const currentCoursePromise = file.async("string");
-						coursesPromisesList.push(currentCoursePromise);
+						coursesPromisesList.push(file.async("string"));
 					});
 					thisObject.sectionsListToStore = [];
 					Promise.all(coursesPromisesList).then((coursesList: any) => {
 						if (coursesList.length === 0) {
-							reject(new InsightError("no course file in the courses folder"));
+							return reject(new InsightError("no course file in the courses folder"));
 						}
 						let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
 						if (!updateSuccessOrNot || thisObject.sectionsListToStore.length === 0) {
@@ -80,12 +84,12 @@ export default class InsightFacade implements IInsightFacade {
 						}
 						let numOfRows: number = thisObject.sectionsListToStore.length;
 						thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
-						resolve(thisObject.datasetIDList);
+						return resolve(thisObject.datasetIDList);
 					}).catch(function (error: any) {
-						reject(new InsightError(error));
+						return reject(new InsightError(error));
 					});
 				}).catch(function (error: any) {
-					reject(new InsightError(error));
+					return reject(new InsightError(error));
 				});
 			} else if (kind === InsightDatasetKind.Rooms) {
 				let roomsPromise: Array<Promise<any>> = [];
@@ -124,7 +128,7 @@ export default class InsightFacade implements IInsightFacade {
 	public removeDataset(id: string): Promise<string> {
 		let thisObject: this;
 		thisObject = this;
-
+		thisObject.LoadFiles();
 		function deleteHelper() {
 			thisObject.datasetIDList.forEach((currentID, index) => {
 				if (currentID === id) {
@@ -168,6 +172,7 @@ export default class InsightFacade implements IInsightFacade {
 	public listDatasets(): Promise<InsightDataset[]> {
 		let thisObject: this;
 		thisObject = this;
+		thisObject.LoadFiles();
 		return new Promise<InsightDataset[]>(function (resolve) {
 			return resolve(thisObject.insightDatasets);
 		});
@@ -176,6 +181,7 @@ export default class InsightFacade implements IInsightFacade {
 	public performQuery(query: any): Promise<any[]> {
 		let thisObject: this;
 		thisObject = this;
+		thisObject.LoadFiles();
 		checkHelper.setTheStoredIDList(thisObject.datasetIDList);
 		checkHelper.setTheStoredDatasetList(thisObject.insightDatasets);
 		return new Promise((resolve, reject) => {
