@@ -92,17 +92,17 @@ function storeRoomInfo
 	for (let child of tree.childNodes) {
 		let room: any = {};
 		if (child.nodeName === "tr") {
-			room[id + "_fullname"] = fullname;
-			room[id + "_shortname"] = buildingCode;
-			room[id + "_number"] = child.childNodes[1].childNodes[1].childNodes[0].value;
-			room[id + "_name"] = room["shortname"] + "_" + room["number"];
-			room[id + "_address"] = address;
-			room[id + "_lat"] = latlon.lat;
-			room[id + "_lon"] = latlon.lon;
-			room[id + "_seats"] = child.childNodes[3].childNodes[0].value.trim().replace("\n", "");
-			room[id + "_type"] = child.childNodes[7].childNodes[0].value.trim().replace("\n", "");
-			room[id + "_furniture"] = child.childNodes[5].childNodes[0].value.trim().replace("\n", "");
-			room[id + "_href"] = child.childNodes[9].childNodes[1].attrs[0].value;
+			room[id + "_fullname"] = String(fullname);
+			room[id + "_shortname"] = String(buildingCode);
+			room[id + "_number"] = String(child.childNodes[1].childNodes[1].childNodes[0].value);
+			room[id + "_name"] = String(room[id + "shortname"] + "_" + room[id + "number"]);
+			room[id + "_address"] = String(address);
+			room[id + "_lat"] = Number(latlon.lat);
+			room[id + "_lon"] = Number(latlon.lon);
+			room[id + "_seats"] = Number(child.childNodes[3].childNodes[0].value.trim().replace("\n", ""));
+			room[id + "_type"] = String(child.childNodes[7].childNodes[0].value.trim().replace("\n", ""));
+			room[id + "_furniture"] = String(child.childNodes[5].childNodes[0].value.trim().replace("\n", ""));
+			room[id + "_href"] = String(child.childNodes[9].childNodes[1].attrs[0].value);
 			roomList.push(room);
 		}
 	}
@@ -132,7 +132,7 @@ export function infoHandler
 					let fullName = buildingInfo.childNodes[1].childNodes[0].childNodes[0].value;
 					let address = buildingInfo.childNodes[3].childNodes[0].childNodes[0].value;
 					let latlon = await getGeoLocation(address);
-					if (buildingTbodyTree !== null) {
+					if (buildingTbodyTree) {
 						storeRoomInfo(id, buildingTbodyTree, fullName, address, buildingCode, latlon, roomList);
 					}
 				}
