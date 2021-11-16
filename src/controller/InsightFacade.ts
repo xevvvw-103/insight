@@ -4,6 +4,9 @@ import * as JSZip from "jszip";
 import * as checkHelper from "./checkHelperFunctions";
 import * as matchHelper from "./matchHelperFunctions";
 import * as otherHelper from "./otherHelperFunctions";
+import * as transformationsHelper from "./transformationHelperFunctions";
+import {indexHandler, infoHandler,} from "./roomsHelpers";
+
 
 /**
  * This is the main programmatic entry point for the project.
@@ -27,26 +30,26 @@ export default class InsightFacade implements IInsightFacade {
 		thisObject = this;
 		let files = fs.readdirSync("./data/");
 		files.forEach(function (fileName) {
-			thisObject.datasetIDList.push(fileName);
-			let data;
+			let content = JSON.parse(fs.readFileSync("./data/" + fileName, "utf8"));
+			// file name format: id + $ + kind
+			let thisID = fileName.split("$")[0];
+			let thisKind = (fileName.split("$")[1] === InsightDatasetKind.Courses.toString()) ?
+				InsightDatasetKind.Courses : InsightDatasetKind.Rooms;
+			thisObject.datasetIDList.push(thisID);
 			let currentDataset: InsightDataset;
-			let id: string = fileName;
-			let numOfRows: number;
-			numOfRows = 0;
+			let numOfRows: number = 0;
 			try {
-				const content = fs.readFileSync("./data/" + fileName, "utf8");
-				data = JSON.parse(content);
-				numOfRows = data.length;
-				currentDataset = {id, kind: InsightDatasetKind.Courses, numRows: numOfRows};
+				numOfRows = content.length;
+				currentDataset = {id: thisID, kind: thisKind, numRows: numOfRows};
 				thisObject.insightDatasets.push(currentDataset);
 			} catch (err) {
-				return Promise.reject(new InsightError("files in data dir reading error"));
+				return Promise.reject(new InsightError("An error occurred in reading ./data/ files"));
 			}
 		});
-		console.log("This the loaded datasetIDList in the InsightFacade Constructor: ");
+		console.log("Loaded datasetIDList: ");
 		console.log(thisObject.datasetIDList);
-		console.log("");
-		console.log("This the loaded insightDatasets in the InsightFacade Constructor: ");
+		console.log("-------------------------");
+		console.log("Loaded insightDatasets: ");
 		console.log(thisObject.insightDatasets);
 	}
 
@@ -60,40 +63,60 @@ export default class InsightFacade implements IInsightFacade {
 				return reject(new InsightError("invalid ID"));
 			}
 			if (kind === InsightDatasetKind.Courses) {
-				JSZip.loadAsync(content, {base64: true})
-					.then((zipObj: any) => {
-						const coursesFolder = zipObj.folder("courses");
-						coursesFolder.forEach((relativePath: string, file: any) => {
-							const currentCoursePromise = file.async("string");
-							coursesPromisesList.push(currentCoursePromise);
-						});
-						thisObject.sectionsListToStore = [];
-						Promise.all(coursesPromisesList)
-							.then((coursesList: any) => {
-								if (coursesList.length === 0) {
-									return reject(new InsightError("no course file in the courses folder"));
-								}
-								let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
-								if (!updateSuccessOrNot) {
-									return reject(new InsightError("try adding sections error"));
-								}
-								if (thisObject.sectionsListToStore.length === 0) {
-									return reject(new InsightError("the sections list to be stored is empty"));
-								} else {
-									let numOfRows: number = thisObject.sectionsListToStore.length;
-									thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, numOfRows);
-									return resolve(thisObject.datasetIDList);
-								}
-							})
-							.catch(function (error: any) {
-								return reject(new InsightError(error));
-							});
-					})
-					.catch(function (error: any) {
-						return reject(new InsightError(error));
+				JSZip.loadAsync(content, {base64: true}).then((zipObj: any) => {
+					const coursesFolder = zipObj.folder("courses");
+					coursesFolder.forEach((relativePath: string, file: any) => {
+						const currentCoursePromise = file.async("string");
+						coursesPromisesList.push(currentCoursePromise);
 					});
-			} else {
-				return reject(new InsightError("invalid kind, should be Course only"));
+					thisObject.sectionsListToStore = [];
+					Promise.all(coursesPromisesList).then((coursesList: any) => {
+						if (coursesList.length === 0) {
+							reject(new InsightError("no course file in the courses folder"));
+						}
+						let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
+						if (!updateSuccessOrNot || thisObject.sectionsListToStore.length === 0) {
+							reject(new InsightError("try adding sections error or the sections list is empty"));
+						}
+						let numOfRows: number = thisObject.sectionsListToStore.length;
+						thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
+						resolve(thisObject.datasetIDList);
+					}).catch(function (error: any) {
+						reject(new InsightError(error));
+					});
+				}).catch(function (error: any) {
+					reject(new InsightError(error));
+				});
+			} else if (kind === InsightDatasetKind.Rooms) {
+				let roomsPromise: Array<Promise<any>> = [];
+				let containedBuildingList: string[] = [];
+				JSZip.loadAsync(content, {base64: true}).then(async (zip: any) => {
+					await indexHandler(zip, reject, containedBuildingList);
+					infoHandler(id, containedBuildingList, zip, reject, roomsPromise);
+					Promise.all(roomsPromise).then((roomList) => {
+						thisObject.lastStep(thisObject, roomList, id, kind);
+						resolve(thisObject.datasetIDList);
+					});
+				}).catch(() => {
+					reject(new InsightError("index.htm error"));
+				});
+			}
+		});
+	}
+
+	private lastStep(thisObject: this, roomList: any[], id: string, kind: InsightDatasetKind.Rooms) {
+		let result: any[] = [];
+		thisObject.updateResult(roomList, result);
+		let numOfRows = result.length;
+		thisObject.addDatasetHelper(id, result, kind, numOfRows);
+	}
+
+	private updateResult(roomList: any[], result: any[]) {
+		roomList.forEach((roomsInBuilding) => {
+			if (roomsInBuilding.length !== 0) {
+				roomsInBuilding.forEach((room: any) => {
+					result.push(room);
+				});
 			}
 		});
 	}
@@ -101,39 +124,43 @@ export default class InsightFacade implements IInsightFacade {
 	public removeDataset(id: string): Promise<string> {
 		let thisObject: this;
 		thisObject = this;
-		let path: string = "./data/" + id;
+
+		function deleteHelper() {
+			thisObject.datasetIDList.forEach((currentID, index) => {
+				if (currentID === id) {
+					delete thisObject.datasetIDList[index];
+				}
+			});
+			thisObject.insightDatasets.forEach((currentInsightDataset, index) => {
+				if (currentInsightDataset.id === id) {
+					delete thisObject.insightDatasets[index];
+				}
+			});
+		}
 		return new Promise((resolve, reject) => {
-			if (id === null) {
-				return reject(new InsightError("ID is null"));
-			}
-			if (id.includes("_")) {
-				return reject(new InsightError("ID contains an underscore"));
-			}
-			if (!id.trim()) {
-				return reject(new InsightError("ID contains only white spaces"));
-			}
-			if (fs.existsSync(path)) {
-				fs.unlink(path, (err2) => {
-					if (err2) {
-						return reject(new InsightError("unexpected error"));
-					} else {
-						// remove id from datasetIDList
-						thisObject.datasetIDList.forEach((currentID, index) => {
-							if (currentID === id) {
-								delete thisObject.datasetIDList[index];
-							}
-						});
-						// remove insightDataset from insightDatasets
-						thisObject.insightDatasets.forEach((currentInsightDataset, index) => {
-							if (currentInsightDataset.id === id) {
-								delete thisObject.datasetIDList[index];
-							}
-						});
-						return resolve(id);
-					}
-				});
-			} else {
-				return reject(new NotFoundError("remove file/id not exist"));
+			try {
+				const path = "./data/" + id;
+				if (fs.existsSync(path + "$" + "courses")) {
+					fs.unlink("./data/" + id + "$" + "courses", function (err: any) {
+						if (err) {
+							throw new InsightError("unexpected error");
+						} else {
+							deleteHelper();
+							resolve(id);
+						}
+					});
+				} else if (fs.existsSync(path + "$" + "rooms")) {
+					fs.unlink("./data/" + id + "$" + "rooms", function (err: any) {
+						if (err) {
+							throw new InsightError("unexpected error");
+						} else {
+							deleteHelper();
+							resolve(id);
+						}
+					});
+				}
+			} catch (err) {
+				reject(new NotFoundError("remove file/id not exist"));
 			}
 		});
 	}
@@ -150,6 +177,7 @@ export default class InsightFacade implements IInsightFacade {
 		let thisObject: this;
 		thisObject = this;
 		checkHelper.setTheStoredIDList(thisObject.datasetIDList);
+		checkHelper.setTheStoredDatasetList(thisObject.insightDatasets);
 		return new Promise((resolve, reject) => {
 			if (checkHelper.checkQUERYValidOrNot(query)) {
 				let theFILTERInWHERE: any = query["WHERE"];
@@ -160,8 +188,11 @@ export default class InsightFacade implements IInsightFacade {
 					order = options["ORDER"];
 				}
 				let data: any[] = [];
+
+				let path: string = "./data/" + checkHelper.currentReferencingDatasetID + "$"
+					+ checkHelper.currentReferencingDatasetIDType;
 				try {
-					const content = fs.readFileSync("./data/" + checkHelper.currentReferencingDatasetID, "utf8");
+					const content = fs.readFileSync(path, "utf8");
 					data = JSON.parse(content);
 				} catch (err) {
 					return reject(new InsightError("file reading error"));
@@ -169,6 +200,12 @@ export default class InsightFacade implements IInsightFacade {
 				let matchedResult: any[];
 				let resultFilteredColumns: any[];
 				matchedResult = matchHelper.matchFILTER(data, theFILTERInWHERE);
+				if (Object.keys(query).includes("TRANSFORMATIONS")){
+					let transformations: any = query["TRANSFORMATIONS"];
+					let group: string[] = transformations["GROUP"];
+					let apply: any[] = transformations["APPLY"];
+					matchedResult = transformationsHelper.doTransformations(matchedResult, group, apply);
+				}
 				if (matchedResult.length > 5000) {
 					return reject(new InsightError("Only queries with a maximum of 5000 results are supported."));
 				} else {
@@ -197,11 +234,11 @@ export default class InsightFacade implements IInsightFacade {
 		return true;
 	}
 
-	public addDatasetHelper(id: string, sectionsListToStore: any[], numOfRows: number) {
-		let currentDataset: InsightDataset = {id, kind: InsightDatasetKind.Courses, numRows: numOfRows};
-		fs.writeFileSync("./data/" + id, JSON.stringify(sectionsListToStore), "utf8");
+	public addDatasetHelper(id: string, sectionsListToStore: any[], kind: InsightDatasetKind, numOfRows: number) {
+		let currentDataset: InsightDataset = {id, kind, numRows: numOfRows};
+		fs.writeFileSync("./data/" + id + "$" + kind, JSON.stringify(sectionsListToStore), "utf8");
 		this.insightDatasets.push(currentDataset);
 		this.datasetIDList.push(id);
-		console.log("dataset: " + id + " added successfully");
+		console.log("dataset: " + id + "$" + kind + " added successfully");
 	}
 }

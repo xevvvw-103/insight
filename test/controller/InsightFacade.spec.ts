@@ -16,6 +16,10 @@ describe("InsightFacade", function () {
 	// automatically be loaded in the 'before' hook.
 	const datasetsToLoad: {[key: string]: string} = {
 		courses: "./test/resources/archives/courses.zip",
+		rooms: "./test/resources/archives/rooms.zip",
+		rooms2: "./test/resources/archives/rooms2.zip",
+		rooms3: "./test/resources/archives/rooms3.zip",
+		invalid: "./test/resources/archives/invalidrooms.zip",
 	};
 
 	before(function () {
@@ -58,6 +62,38 @@ describe("InsightFacade", function () {
 			const expected: string[] = [id];
 			return insightFacade.addDataset(id, content, InsightDatasetKind.Courses).then((result: string[]) => {
 				expect(result).to.deep.equal(expected);
+			});
+		});
+		it("Should add a valid room dataset", function () {
+			const id: string = "rooms";
+			const content: string = datasetContents.get("rooms") ?? "";
+			const expected: string[] = [id];
+			return insightFacade.addDataset(id, content, InsightDatasetKind.Rooms).then((result: string[]) => {
+				expect(result).to.deep.equal(expected);
+			});
+		});
+		it("Should add a valid room2 dataset", function () {
+			const id: string = "rooms2";
+			const content: string = datasetContents.get("rooms2") ?? "";
+			const expected: string[] = [id];
+			return insightFacade.addDataset(id, content, InsightDatasetKind.Rooms).then((result: string[]) => {
+				expect(result).to.deep.equal(expected);
+			});
+		});
+		it("Should add a valid room3 dataset", function () {
+			const id: string = "rooms3";
+			const content: string = datasetContents.get("rooms3") ?? "";
+			const expected: string[] = [id];
+			return insightFacade.addDataset(id, content, InsightDatasetKind.Rooms).then((result: string[]) => {
+				expect(result).to.deep.equal(expected);
+			});
+		});
+		it("Should add an invalid room dataset", function () {
+			const id: string = "rooms4";
+			const content: string = datasetContents.get("invalid") ?? "";
+			const expected: InsightError = new InsightError("Invalid Room Zip");
+			return insightFacade.addDataset(id, content, InsightDatasetKind.Rooms).then((result: string[]) => {
+				expect(result).to.be.instanceof(expected);
 			});
 		});
 	});
