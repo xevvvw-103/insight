@@ -78,15 +78,13 @@ export default class InsightFacade implements IInsightFacade {
 						if (coursesList.length === 0) {
 							return reject(new InsightError("no course file in the courses folder"));
 						}
-						let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
-						if (!updateSuccessOrNot || thisObject.sectionsListToStore.length === 0) {
-							reject(new InsightError("try adding sections error or the sections list is empty"));
-						}
+						thisObject.updateHelper(thisObject, coursesList, id, reject);
 						let numOfRows: number = thisObject.sectionsListToStore.length;
+						if (thisObject.sectionsListToStore.length === 0) {
+							reject(new InsightError("the sections list is empty"));
+						}
 						thisObject.addDatasetHelper(id, thisObject.sectionsListToStore, kind, numOfRows);
 						return resolve(thisObject.datasetIDList);
-					}).catch(function (error: any) {
-						return reject(new InsightError(error));
 					});
 				}).catch(function (error: any) {
 					return reject(new InsightError(error));
@@ -106,6 +104,13 @@ export default class InsightFacade implements IInsightFacade {
 				});
 			}
 		});
+	}
+
+	private updateHelper(thisObject: this, coursesList: any, id: string, reject: (reason?: any) => void) {
+		let updateSuccessOrNot: boolean = thisObject.updateSectionsListToStore(coursesList, id);
+		if (!updateSuccessOrNot) {
+			reject(new InsightError("try adding sections error"));
+		}
 	}
 
 	private lastStep(thisObject: this, roomList: any[], id: string, kind: InsightDatasetKind.Rooms) {
