@@ -107,7 +107,7 @@ export default class Server {
 		let content = buffer.toString();
 		if (kind) {
 			insightFacade.addDataset(req.params.id, content, kind).then((response) => {
-				res.status(200).json({result: response + " added"});
+				res.status(200).json({result: response});
 			}).catch((err) => {
 				res.status(400).json({error: err.message});
 			});
@@ -132,7 +132,7 @@ export default class Server {
 		const insightFacade = new InsightFacade();
 		if (insightFacade.datasetIDList.includes(req.params.id)) {
 			insightFacade.removeDataset(req.params.id).then((response) => {
-				res.status(200).json({result: response + " deleted"});
+				res.status(200).json({result: response});
 			}).catch((err) => {
 				res.status(400).json({error: err.message});
 			});
