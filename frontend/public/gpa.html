@@ -4,6 +4,38 @@
 	<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
 	<title>310 Frontend</title>
 	<link href="/style.css" rel="stylesheet" />
+	<style>
+		table.GeneratedTable {
+			width: 12px;
+			background-color: #ffffff;
+			border-collapse: collapse;
+			border-width: 2px;
+			border-color: #000000;
+			border-style: solid;
+			color: #00152d;
+		}
+
+		table.GeneratedTable td, table.GeneratedTable th {
+			border-width: 2px;
+			border-color: #000000;
+			border-style: solid;
+			padding: 3px;
+		}
+
+		table.GeneratedTable thead {
+			background-color: #a3dcff;
+		}
+		#table-wrapper {
+			position: center;
+		}
+		#table-scroll {
+			height:500px;
+			width: 250px;
+			overflow:auto;
+			margin-right: auto;
+			margin-left: auto;
+		}
+	</style>
 </head>
 <body>
 <div class="navbar">
@@ -14,8 +46,17 @@
 		<li><a class="active" id="GPAB" href="/gpa.html">GPA Boosters</a></li>
 	</ul>
 </div>
-<button id="click-me-button" class="button" >Click Me!</button>
+<div class="container">
+	<h2>GPA Boosters</h2>
+	<p class="pageDescrip">Help you get higher grades</p>
+	<button id="gpa-button" class="button">Show Me!</button>
+</div>
+<div id="table-wrapper">
+	<div id="table-scroll">
+	</div>
+</div>
 
-<script type="text/javascript" src="/frontend.js"></script>
+
+<script type="text/javascript" src="/gpa.js"></script>
 </body>
 </html>

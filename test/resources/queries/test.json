@@ -1,0 +1,29 @@
+{
+	"title": "very complicate query",
+	"input": {
+		"WHERE": {
+			"GT": {
+				"courses_avg": 90
+			}
+		},
+		"OPTIONS": {
+			"COLUMNS": [
+				"courses_title", "overallAvg"
+			],
+			"ORDER": {
+				"dir": "DOWN",
+				"keys": ["overallAvg"]
+			}
+		},
+		"TRANSFORMATIONS": {
+			"GROUP": ["courses_title"],
+			"APPLY": [{
+				"overallAvg": {
+					"AVG": "courses_avg"
+				}
+			}]
+		}
+	},
+	"errorExpected": true,
+	"with": "InsightError"
+}
