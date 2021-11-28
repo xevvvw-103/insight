@@ -4,6 +4,11 @@
 	<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
 	<title>310 Frontend</title>
 	<link href="/style.css" rel="stylesheet" />
+	<style>
+		#listAndRemove {
+			float: left;
+		}
+	</style>
 </head>
 <body>
 <div class="navbar">
@@ -14,20 +19,29 @@
 		<li><a id="GPAB" href="/gpa.html">GPA Boosters</a></li>
 	</ul>
 </div>
-<div class="container">
-	<h2>Guide Me There</h2>
-	<p class="pageDescrip">Guide you to lecture room</p>
-	<div class="data-property">
-		<label>Lecture Room: </label>
-		<input type="text" placeholder="e.g. ALRD_105" id="roomname"/>
-		<div id="selectedCourses"></div>
-	</div>
-	<div id="test">
-	</div>
-	<button id="route-button" class="button" >submit</button>
-	<div id="map"></div>
-	<iframe height="450px" width="100%" id="map2"></iframe>
+<div id="listAndRemove">
+	<form>
+		<label >Loaded dataset(s):</label>
+		<select id="sele">
+		</select>
+		<button id="delete-button" >Delete</button>
+	</form>
 </div>
+<div class="container">
+		<h2>Guide Me There</h2>
+		<p class="pageDescrip">Guide you to lecture room</p>
+		<div class="data-property">
+			<label>Lecture Room: </label>
+			<input type="text" placeholder="e.g. ALRD_105" id="roomname"/>
+			<div id="selectedCourses"></div>
+		</div>
+		<div id="test">
+		</div>
+		<button id="route-button" class="button" >submit</button>
+		<div id="map"></div>
+		<iframe height="450px" width="100%" id="map2"></iframe>
+</div>
+
 <script>
 	document.getElementById("map2").style.display = "none";
 </script>

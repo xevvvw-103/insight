@@ -226,3 +226,11 @@ export function checkFILTERValidOrNot(FILTER: any, isThisFilterInWhereOrNot: boo
 	return true;
 }
 
+export function resetAllStuff() {
+	currentCOLUMNS = [];
+	currentGROUP = [];
+	currentAPPLYKeys = [];
+	currentReferencingDatasetID = "";
+	theStoredDatasetList = [];
+	theStoredIDList = [];
+}

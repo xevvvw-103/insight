@@ -218,12 +218,15 @@ export default class InsightFacade implements IInsightFacade {
 					matchedResult = transformationsHelper.doTransformations(matchedResult, group, apply);
 				}
 				if (matchedResult.length > 5000) {
+					checkHelper.resetAllStuff();
 					return reject(new InsightError("Only queries with a maximum of 5000 results are supported."));
 				} else {
 					resultFilteredColumns = matchHelper.filterTheCOLUMNS(matchedResult, columns, order);
+					checkHelper.resetAllStuff();
 					return resolve(resultFilteredColumns);
 				}
 			} else {
+				checkHelper.resetAllStuff();
 				return reject(new InsightError("This query is not valid"));
 			}
 		});

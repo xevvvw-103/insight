@@ -184,10 +184,10 @@ function isApplyKeyValid(theApplyKey: string): boolean {
 		console.log("theApplyKey contains only white spaces");
 		return false;
 	}
-	// if (currentAPPLYKeys.includes(theApplyKey)) {
-	// 	console.log("duplicate apply keys name");
-	// 	return false;
-	// }
+	if (currentAPPLYKeys.includes(theApplyKey)) {
+		console.log("duplicate apply keys name");
+		return false;
+	}
 	return true;
 }
 

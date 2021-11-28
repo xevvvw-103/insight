@@ -1,4 +1,6 @@
 document.getElementById("route-button").addEventListener("click", handleClickMe);
+getID();
+document.getElementById("delete-button").addEventListener("click", handleDele)
 
 let currentPos;
 
@@ -98,3 +100,28 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
 	infoWindow.open(map);
 }
 
+function getID() {
+	fetch('/datasets').then((response) => response.json())
+		.then((data) => {
+			return data["result"];
+		})
+		.then((arr) => {
+			let text = "";
+			arr.forEach((v) => {
+				text += "<option>" + v.id + "</option>";
+			});
+			return text;
+		}).then((t) => {
+			document.getElementById("sele").innerHTML = t;
+		});
+}
+
+function handleDele() {
+	let val = document.getElementById("sele").value;
+	fetch('/dataset/' + val, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+		}
+	}).then(() => {alert(val + "deleted");})
+}
