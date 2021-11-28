@@ -3,7 +3,7 @@ import * as http from "http";
 import cors from "cors";
 import InsightFacade from "../controller/InsightFacade";
 import {InsightDatasetKind, InsightError, NotFoundError} from "../controller/IInsightFacade";
-import fs from "fs";
+import * as fs from "fs";
 
 export default class Server {
 	private readonly port: number;
@@ -96,25 +96,23 @@ export default class Server {
 
 	private static addData(req: Request, res: Response) {
 		console.log(`Server::put(..) - params: ${JSON.stringify(req.params)}`);
-		const rooms = fs.readFileSync("./test/resources/archives/rooms.zip");
-		const courses = fs.readFileSync("./test/resources/archives/courses.zip");
-		const insightFacade = new InsightFacade();
-		let content;
+		const buffer = req.body;
+		if (req.headers["content-type"] !== "application/zip") {
+			let err = new InsightError("invalid file type");
+			res.status(400).json({error: err.message});
+		}
 		let kind = (req.params.kind === "courses") ? InsightDatasetKind.Courses :
 			(req.params.kind === "rooms") ? InsightDatasetKind.Rooms : null;
-		if (kind === InsightDatasetKind.Rooms) {
-			content = rooms.toString("base64");
-		} else if (kind === InsightDatasetKind.Courses) {
-			content = courses.toString("base64");
-		}
-		if (content && kind) {
+		const insightFacade = new InsightFacade();
+		let content = buffer.toString();
+		if (kind) {
 			insightFacade.addDataset(req.params.id, content, kind).then((response) => {
 				res.status(200).json({result: response + " added"});
 			}).catch((err) => {
 				res.status(400).json({error: err.message});
 			});
 		} else {
-			let err = new InsightError("not valid request");
+			let err = new InsightError("invalid kind");
 			res.status(400).json({error: err.message});
 		}
 	}
