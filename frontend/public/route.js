@@ -19,7 +19,6 @@ async function handleClickMe() {
 				]
 			}
 		};
-
 		let res = await fetch('/query', {
 			method: 'POST',
 			headers: {

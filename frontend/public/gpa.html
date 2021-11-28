@@ -23,12 +23,14 @@
 		table.GeneratedTable thead {
 			background-color: #a3dcff;
 		}
-		#table-scroll {
-			height:500px;
-			width: 250px;
-			overflow:auto;
-			margin-right: auto;
-			margin-left: auto;
+		.display-flex {
+			display: flex;
+		}
+		.div-size {
+			width: auto;
+			height: 500px;
+			margin: auto;
+			overflow: auto;
 		}
 	</style>
 </head>
@@ -36,8 +38,7 @@
 <div class="navbar">
 	<ul>
 		<li><a href="/index.html">CampusExplorer</a></li>
-		<li><a id="courses" href="/courses.html">Courses</a></li>
-		<li><a id="rooms" href="/rooms.html">Rooms</a></li>
+		<li><a id="courses" href="/courses.html">Query</a></li>
 		<li><a class="active" id="GPAB" href="/gpa.html">GPA Boosters</a></li>
 	</ul>
 </div>
@@ -46,10 +47,11 @@
 	<p class="pageDescrip">Help you get higher grades</p>
 	<button id="gpa-button" class="button">Show Me!</button>
 </div>
-<div id="table-wrapper">
-	<div id="table-scroll">
+<div class="display-flex">
+	<div class="div-size" id="result">
 	</div>
 </div>
+
 
 
 <script type="text/javascript" src="/gpa.js"></script>

@@ -37,16 +37,24 @@ async function listCourses() {
 		.then((data) => {
 			return data["result"];
 		})
-		.then((array) => {
-			generateTables(array);
+		.then((res) => {
+			let columns = query["OPTIONS"]["COLUMNS"];
+			generateTables(res, columns);
 		})
 }
-function generateTables(data) {
-	let text = "<table class='GeneratedTable'><thead><tr><th>Course Title</th><th>Overall Avg</th></tr></thead><tbody>";
-	data.forEach((ele) => {
-		text += "<tr><td>" + ele["courses_title"] + "</td><td>" + ele["overallAvg"] + "</td>></tr>";
+function generateTables(res, columns) {
+	let text = "<table class='GeneratedTable'><thead><tr>";
+	columns.forEach((title) => {
+		text += "<th>" + title + "</th>";
+	})
+	text += "</tr></thead><tbody>";
+	res.forEach((ele) => {
+		text += "<tr>";
+		columns.forEach((title) => {
+			text += "<td>" + ele[title] + "</td>";
+		})
+		text += "</tr>";
 	});
 	text += "</tbody></table>";
-	document.getElementById("table-scroll").innerHTML = text;
-
+	document.getElementById("result").innerHTML = text;
 }

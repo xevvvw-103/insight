@@ -4,18 +4,60 @@
 	<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
 	<title>310 Frontend</title>
 	<link href="/style.css" rel="stylesheet" />
+	<style>
+		.display-flex {
+			display: flex;
+		}
+		.div-size {
+			width: auto;
+			height: 500px;
+			margin: auto;
+			overflow: auto;
+		}
+		table.GeneratedTable {
+			width: 20px;
+			background-color: #ffffff;
+			border-collapse: collapse;
+			border-width: 2px;
+			border-color: #000000;
+			border-style: solid;
+			color: #00152d;
+		}
+		table.GeneratedTable td, table.GeneratedTable th {
+			border-width: 2px;
+			padding: 3px;
+		}
+		table.GeneratedTable thead {
+			background-color: #a3dcff;
+		}
+	</style>
+
 </head>
 <body>
 <div class="navbar">
 	<ul>
 		<li><a href="/index.html">CampusExplorer</a></li>
-		<li><a class="active" id="courses" href="/courses.html">Courses</a></li>
-		<li><a id="rooms" href="/rooms.html">Rooms</a></li>
+		<li><a class="active" id="courses" href="/courses.html">Query</a></li>
 		<li><a id="GPAB" href="/gpa.html">GPA Boosters</a></li>
 	</ul>
 </div>
-<button id="click-me-button" class="button" >Click Me!</button>
+<div class="container">
+	<h2>Query Engine</h2>
+	<p class="pageDescrip">Use json query to find your interests</p>
+	<button id="click-me-button" class="button" >Apply!</button>
 
-<script type="text/javascript" src="/frontend.js"></script>
+</div>
+<div class="display-flex">
+	<div class="div-size" id="query">
+		<textarea id="inputQ" rows="30" cols="50">
+		</textarea>
+	</div>
+	<div class="div-size" id="result">
+	</div>
+</div>
+
+
+
+<script type="text/javascript" src="/courses.js"></script>
 </body>
 </html>
