@@ -3,7 +3,6 @@ import * as http from "http";
 import cors from "cors";
 import InsightFacade from "../controller/InsightFacade";
 import {InsightDatasetKind, InsightError, NotFoundError} from "../controller/IInsightFacade";
-import * as fs from "fs";
 
 export default class Server {
 	private readonly port: number;
@@ -97,14 +96,10 @@ export default class Server {
 	private static addData(req: Request, res: Response) {
 		console.log(`Server::put(..) - params: ${JSON.stringify(req.params)}`);
 		const buffer = req.body;
-		// if (req.headers["content-type"] !== "application/zip") {
-		// 	let err = new InsightError("invalid file type");
-		// 	res.status(400).json({error: err.message});
-		// }
 		let kind = (req.params.kind === "courses") ? InsightDatasetKind.Courses :
 			(req.params.kind === "rooms") ? InsightDatasetKind.Rooms : null;
 		const insightFacade = new InsightFacade();
-		let content = buffer.toString();
+		let content = Buffer.from(buffer).toString("base64");
 		if (kind) {
 			insightFacade.addDataset(req.params.id, content, kind).then((response) => {
 				res.status(200).json({result: response});

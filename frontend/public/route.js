@@ -122,5 +122,5 @@ function handleDele() {
 		headers: {
 			'Content-Type': 'application/json',
 		}
-	}).then(() => {alert(val + "deleted");})
+	}).then(() => {alert("dataset: " + val + " deleted");})
 }
