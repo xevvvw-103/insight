@@ -97,10 +97,10 @@ export default class Server {
 	private static addData(req: Request, res: Response) {
 		console.log(`Server::put(..) - params: ${JSON.stringify(req.params)}`);
 		const buffer = req.body;
-		if (req.headers["content-type"] !== "application/zip") {
-			let err = new InsightError("invalid file type");
-			res.status(400).json({error: err.message});
-		}
+		// if (req.headers["content-type"] !== "application/zip") {
+		// 	let err = new InsightError("invalid file type");
+		// 	res.status(400).json({error: err.message});
+		// }
 		let kind = (req.params.kind === "courses") ? InsightDatasetKind.Courses :
 			(req.params.kind === "rooms") ? InsightDatasetKind.Rooms : null;
 		const insightFacade = new InsightFacade();
